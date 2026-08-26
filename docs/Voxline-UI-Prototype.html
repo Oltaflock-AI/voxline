@@ -1,0 +1,2029 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<title>Voxline: the front desk that never sleeps</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Voxline answers every call your travel agency misses, captures a full trip brief, and drops it into your pipeline before the caller hangs up.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   VOXLINE DESIGN SYSTEM v2: "Deep Ink"
+   Dark is the default surface. Light is a first-class override.
+   Every colour, radius, shadow and type step below is a token.
+   Nothing in this file should hard-code a hex outside :root.
+   ============================================================ */
+:root{
+  /* --- surfaces --- */
+  --bg:#06090C;
+  --bg-2:#080C11;
+  --surface:#0C1116;
+  --surface-2:#111820;
+  --surface-3:#18212B;
+  --overlay:rgba(4,7,10,.72);
+
+  /* --- lines --- */
+  --border:rgba(255,255,255,.07);
+  --border-2:rgba(255,255,255,.13);
+  --border-3:rgba(255,255,255,.22);
+
+  /* --- ink --- */
+  --text:#EDF2F5;
+  --text-2:#AEBCC6;
+  --muted:#77848F;
+  --faint:#4B5761;
+
+  /* --- brand --- */
+  --accent:#14E0C0;
+  --accent-2:#63E6FF;
+  --accent-ink:#03120F;
+  --accent-soft:rgba(20,224,192,.11);
+  --accent-line:rgba(20,224,192,.32);
+  --accent-text:#5FEDD6;
+
+  /* --- semantic --- */
+  --positive:#3BD68B; --positive-soft:rgba(59,214,139,.13);
+  --warning:#F5C451;  --warning-soft:rgba(245,196,81,.13);
+  --negative:#FF6E6E; --negative-soft:rgba(255,110,110,.13);
+  --neutral-soft:rgba(160,178,190,.11);
+
+  /* --- elevation --- */
+  --sh-1:0 1px 2px rgba(0,0,0,.45);
+  --sh-2:0 10px 30px -8px rgba(0,0,0,.6), 0 1px 0 rgba(255,255,255,.03) inset;
+  --sh-3:0 40px 80px -24px rgba(0,0,0,.75), 0 1px 0 rgba(255,255,255,.04) inset;
+  --glow:0 0 0 1px var(--accent-line), 0 0 32px -6px rgba(20,224,192,.35);
+
+  /* --- geometry (8pt) --- */
+  --r-xs:8px; --r-sm:11px; --r-md:14px; --r-lg:20px; --r-xl:28px; --r-pill:999px;
+
+  /* --- painted decoration --- */
+  --grad:linear-gradient(135deg,#14E0C0,#63E6FF);
+  --grad-soft:linear-gradient(135deg,rgba(20,224,192,.16),rgba(99,230,255,.10));
+  --grad-bar:linear-gradient(180deg,#5FEDD6,#0E9E89);
+  --nav-bg:rgba(8,12,17,.68);
+  --bloom:
+    radial-gradient(760px 380px at 8% -10%, rgba(20,224,192,.14), transparent 62%),
+    radial-gradient(900px 460px at 92% -14%, rgba(99,230,255,.11), transparent 58%);
+  --grid-line:rgba(255,255,255,.045);
+  --scrub:rgba(255,255,255,.14);
+  /* material: glass fill, inner highlight, gradient hairline */
+  --glass:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.012));
+  --hairline:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,.02) 40%,transparent);
+  --inner-hl:inset 0 1px 0 rgba(255,255,255,.06);
+  --spot:rgba(20,224,192,.10);
+  --skeleton:linear-gradient(90deg,var(--surface-2),var(--surface-3),var(--surface-2));
+}
+[data-theme="light"]{
+  --bg:#F4F6F8;
+  --bg-2:#FFFFFF;
+  --surface:#FFFFFF;
+  --surface-2:#F1F4F6;
+  --surface-3:#E7ECEF;
+  --overlay:rgba(12,20,26,.42);
+
+  --border:#E4E9ED;
+  --border-2:#D2DAE0;
+  --border-3:#B9C4CC;
+
+  --text:#070D12;
+  --text-2:#3B4954;
+  --muted:#66737D;
+  --faint:#93A0A9;
+
+  --accent:#07836F;
+  --accent-2:#0C7490;
+  --accent-ink:#FFFFFF;
+  --accent-soft:rgba(7,131,111,.09);
+  --accent-line:rgba(7,131,111,.26);
+  --accent-text:#066A5A;
+
+  --positive:#0B7A50; --positive-soft:#E9F8F1;
+  --warning:#9A6206;  --warning-soft:#FDF6E7;
+  --negative:#C0342E; --negative-soft:#FDF0EF;
+  --neutral-soft:#EDF1F3;
+
+  --sh-1:0 1px 2px rgba(9,20,28,.05);
+  --sh-2:0 10px 28px -12px rgba(9,20,28,.16), 0 1px 0 rgba(255,255,255,.7) inset;
+  --sh-3:0 40px 80px -28px rgba(9,20,28,.22);
+  --glow:0 0 0 1px var(--accent-line), 0 0 28px -10px rgba(7,131,111,.35);
+
+  --grad:linear-gradient(135deg,#07836F,#0C7490);
+  --grad-soft:linear-gradient(135deg,rgba(7,131,111,.10),rgba(12,116,144,.07));
+  --grad-bar:linear-gradient(180deg,#12A88F,#07836F);
+  --nav-bg:rgba(244,246,248,.72);
+  --bloom:
+    radial-gradient(760px 380px at 8% -10%, rgba(7,131,111,.10), transparent 62%),
+    radial-gradient(900px 460px at 92% -14%, rgba(12,116,144,.09), transparent 58%);
+  --grid-line:rgba(9,20,28,.06);
+  --scrub:rgba(9,20,28,.14);
+  --glass:linear-gradient(180deg,rgba(255,255,255,.9),rgba(255,255,255,.35));
+  --hairline:linear-gradient(180deg,rgba(9,20,28,.10),rgba(9,20,28,.02) 40%,transparent);
+  --inner-hl:inset 0 1px 0 rgba(255,255,255,.9);
+  --spot:rgba(7,131,111,.07);
+  --skeleton:linear-gradient(90deg,var(--surface-2),#FAFCFD,var(--surface-2));
+}
+
+/* ---------- reset & base ---------- */
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{
+  background:var(--bg); color:var(--text);
+  font-family:'Inter',system-ui,-apple-system,sans-serif;
+  font-size:15px; line-height:1.6; font-weight:450;
+  letter-spacing:-.005em;
+  -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+  transition:background .3s ease,color .3s ease;
+}
+h1,h2,h3,h4{font-weight:600; line-height:1.12}
+h1{letter-spacing:-.042em}
+h2{letter-spacing:-.036em}
+h3{letter-spacing:-.024em}
+h4{letter-spacing:-.018em}
+.display{font-family:'Instrument Serif',Georgia,serif;font-weight:400;letter-spacing:-.014em;line-height:1.06}
+.panel-title{font-family:'Instrument Serif',Georgia,serif;font-weight:400;font-size:24px;letter-spacing:-.012em;line-height:1.1}
+.serif{font-family:'Instrument Serif',Georgia,serif; font-weight:400; letter-spacing:-.01em;}
+.serif-i{font-family:'Instrument Serif',Georgia,serif; font-style:italic; font-weight:400;}
+.mono{font-family:'JetBrains Mono',ui-monospace,monospace; font-feature-settings:"zero" 1;}
+.num{font-variant-numeric:tabular-nums; letter-spacing:-.02em;}
+.lab{font-family:'JetBrains Mono',ui-monospace,monospace; font-size:10.5px; font-weight:500;
+     letter-spacing:.13em; text-transform:uppercase; color:var(--muted);}
+a{color:inherit;text-decoration:none}
+img{max-width:100%;display:block}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input,select,textarea{font-family:inherit;font-size:14px}
+::selection{background:var(--accent-soft); color:var(--text);}
+:focus-visible{outline:2px solid var(--accent); outline-offset:2px; border-radius:6px}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border-2);border-radius:99px;border:3px solid transparent;background-clip:content-box}
+::-webkit-scrollbar-thumb:hover{background:var(--border-3);background-clip:content-box}
+
+/* film grain: the single cheapest premium cue */
+body::after{
+  content:""; position:fixed; inset:0; pointer-events:none; z-index:9998; opacity:.5;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='.035'/%3E%3C/svg%3E");
+  mix-blend-mode:overlay;
+}
+[data-theme="light"] body::after{opacity:.35}
+
+.container{max-width:1200px;margin:0 auto;padding:0 32px}
+section.block{padding:72px 0;position:relative;scroll-margin-top:92px}
+@media (max-width:820px){section.block{padding:56px 0}.container{padding:0 20px}}
+
+/* ---------- primitives ---------- */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  background:var(--grad); color:var(--accent-ink); font-weight:600; font-size:14px;
+  padding:0 22px; height:46px; border-radius:var(--r-sm); letter-spacing:-.01em;
+  box-shadow:0 8px 24px -10px rgba(20,224,192,.7);
+  transition:transform .16s cubic-bezier(.2,.7,.3,1), box-shadow .16s ease, filter .16s ease;
+}
+.btn:hover{transform:translateY(-1px);filter:brightness(1.06);box-shadow:0 14px 34px -12px rgba(20,224,192,.85)}
+.btn:active{transform:translateY(0) scale(.985)}
+.btn.sm{height:38px;padding:0 16px;font-size:13px;border-radius:var(--r-xs)}
+.btn.lg{height:54px;padding:0 28px;font-size:15px;border-radius:var(--r-md)}
+.btn-ghost{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  background:var(--surface); color:var(--text); border:1px solid var(--border-2);
+  font-weight:500;font-size:14px;padding:0 20px;height:46px;border-radius:var(--r-sm);
+  transition:border-color .16s ease,background .16s ease,transform .16s ease;
+}
+.btn-ghost:hover{border-color:var(--border-3);background:var(--surface-2);transform:translateY(-1px)}
+.btn-ghost.sm{height:38px;padding:0 15px;font-size:13px;border-radius:var(--r-xs)}
+.btn-ghost.lg{height:54px;padding:0 26px;font-size:15px;border-radius:var(--r-md)}
+.btn-quiet{
+  display:inline-flex;align-items:center;gap:6px;color:var(--muted);font-size:13px;font-weight:500;
+  padding:6px 10px;border-radius:var(--r-xs);transition:color .15s,background .15s;
+}
+.btn-quiet:hover{color:var(--text);background:var(--surface-2)}
+
+.card{
+  background:var(--surface); background-image:var(--glass);
+  border:1px solid var(--border); border-radius:var(--r-lg);
+  box-shadow:var(--sh-2), var(--inner-hl); position:relative; isolation:isolate;
+}
+/* gradient hairline: light catches the top edge, fades by 40% down */
+.card::after{
+  content:"";position:absolute;inset:0;border-radius:inherit;padding:1px;pointer-events:none;z-index:-1;
+  background:var(--hairline);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor; mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  mask-composite:exclude;
+}
+.card-pad{padding:24px}
+.card-head{display:flex;align-items:baseline;justify-content:space-between;gap:16px;margin-bottom:20px}
+.card-head h3{font-family:'Instrument Serif',Georgia,serif;font-weight:400;font-size:19px;letter-spacing:-.008em;line-height:1.1}
+.card-sub{font-size:12px;color:var(--muted)}
+
+.badge{
+  display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 10px;
+  border-radius:var(--r-pill);font-size:11.5px;font-weight:600;letter-spacing:-.005em;
+  background:var(--neutral-soft);color:var(--text-2);
+}
+.badge .dot{width:5px;height:5px;border-radius:50%;background:currentColor}
+.badge.ok{background:var(--positive-soft);color:var(--positive)}
+.badge.acc{background:var(--accent-soft);color:var(--accent-text)}
+.badge.warn{background:var(--warning-soft);color:var(--warning)}
+.badge.bad{background:var(--negative-soft);color:var(--negative)}
+
+.eyebrow{
+  display:inline-flex;align-items:center;gap:8px;
+  font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500;
+  letter-spacing:.16em;text-transform:uppercase;color:var(--accent-text);
+  padding:6px 12px;border:1px solid var(--accent-line);border-radius:var(--r-pill);
+  background:var(--accent-soft);
+}
+.rule{height:1px;background:var(--border);border:0}
+
+.theme-toggle{
+  display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;
+  border-radius:var(--r-sm);border:1px solid var(--border);background:var(--surface);
+  color:var(--muted);transition:color .15s,border-color .15s,background .15s;flex-shrink:0;
+}
+.theme-toggle:hover{color:var(--text);border-color:var(--border-2);background:var(--surface-2)}
+.theme-toggle svg{width:16px;height:16px}
+[data-theme="light"] .i-sun{display:none}
+[data-theme="dark"] .i-moon{display:none}
+
+/* ---------- brand mark ---------- */
+.logo{display:inline-flex;align-items:center;gap:11px;font-weight:600;font-size:13px;
+  letter-spacing:.19em;text-transform:uppercase;color:var(--text)}
+.logo-mark{
+  width:30px;height:30px;border-radius:10px;background:var(--grad);
+  display:grid;place-items:center;flex-shrink:0;position:relative;
+  box-shadow:0 8px 22px -10px rgba(20,224,192,.95), inset 0 1px 0 rgba(255,255,255,.5);
+}
+.logo-mark::after{content:"";position:absolute;inset:0;border-radius:inherit;border:1px solid rgba(255,255,255,.22)}
+.logo-mark svg{width:16px;height:16px;color:var(--accent-ink)}
+.logo.sm{font-size:11.5px;letter-spacing:.17em}
+.logo.sm .logo-mark{width:26px;height:26px;border-radius:9px}
+.logo .by{font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--faint);font-weight:500}
+
+/* ============================================================
+   WAVEFORM MOTIF — the brand system, not just the logo.
+   One shape (a voice waveform) reused as divider, watermark,
+   loader, empty-state art and section transition.
+   ============================================================ */
+.wave-rule{
+  height:22px;width:100%;display:block;border:0;
+  color:var(--accent);opacity:.5;
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='22' viewBox='0 0 240 22'%3E%3Cg fill='%23000'%3E%3Crect x='0' y='9' width='2' height='4' rx='1'/%3E%3Crect x='8' y='7' width='2' height='8' rx='1'/%3E%3Crect x='16' y='4' width='2' height='14' rx='1'/%3E%3Crect x='24' y='8' width='2' height='6' rx='1'/%3E%3Crect x='32' y='2' width='2' height='18' rx='1'/%3E%3Crect x='40' y='9' width='2' height='4' rx='1'/%3E%3Crect x='48' y='6' width='2' height='10' rx='1'/%3E%3Crect x='56' y='9' width='2' height='4' rx='1'/%3E%3Crect x='64' y='3' width='2' height='16' rx='1'/%3E%3Crect x='72' y='8' width='2' height='6' rx='1'/%3E%3Crect x='80' y='5' width='2' height='12' rx='1'/%3E%3Crect x='88' y='9' width='2' height='4' rx='1'/%3E%3Crect x='96' y='7' width='2' height='8' rx='1'/%3E%3Crect x='104' y='2' width='2' height='18' rx='1'/%3E%3Crect x='112' y='9' width='2' height='4' rx='1'/%3E%3Crect x='120' y='6' width='2' height='10' rx='1'/%3E%3Crect x='128' y='9' width='2' height='4' rx='1'/%3E%3Crect x='136' y='4' width='2' height='14' rx='1'/%3E%3Crect x='144' y='8' width='2' height='6' rx='1'/%3E%3Crect x='152' y='3' width='2' height='16' rx='1'/%3E%3Crect x='160' y='9' width='2' height='4' rx='1'/%3E%3Crect x='168' y='7' width='2' height='8' rx='1'/%3E%3Crect x='176' y='5' width='2' height='12' rx='1'/%3E%3Crect x='184' y='9' width='2' height='4' rx='1'/%3E%3Crect x='192' y='2' width='2' height='18' rx='1'/%3E%3Crect x='200' y='8' width='2' height='6' rx='1'/%3E%3Crect x='208' y='6' width='2' height='10' rx='1'/%3E%3Crect x='216' y='9' width='2' height='4' rx='1'/%3E%3Crect x='224' y='4' width='2' height='14' rx='1'/%3E%3Crect x='232' y='9' width='2' height='4' rx='1'/%3E%3C/g%3E%3C/svg%3E") repeat-x center/240px 22px;
+  mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='22' viewBox='0 0 240 22'%3E%3Cg fill='%23000'%3E%3Crect x='0' y='9' width='2' height='4' rx='1'/%3E%3Crect x='8' y='7' width='2' height='8' rx='1'/%3E%3Crect x='16' y='4' width='2' height='14' rx='1'/%3E%3Crect x='24' y='8' width='2' height='6' rx='1'/%3E%3Crect x='32' y='2' width='2' height='18' rx='1'/%3E%3Crect x='40' y='9' width='2' height='4' rx='1'/%3E%3Crect x='48' y='6' width='2' height='10' rx='1'/%3E%3Crect x='56' y='9' width='2' height='4' rx='1'/%3E%3Crect x='64' y='3' width='2' height='16' rx='1'/%3E%3Crect x='72' y='8' width='2' height='6' rx='1'/%3E%3Crect x='80' y='5' width='2' height='12' rx='1'/%3E%3Crect x='88' y='9' width='2' height='4' rx='1'/%3E%3Crect x='96' y='7' width='2' height='8' rx='1'/%3E%3Crect x='104' y='2' width='2' height='18' rx='1'/%3E%3Crect x='112' y='9' width='2' height='4' rx='1'/%3E%3Crect x='120' y='6' width='2' height='10' rx='1'/%3E%3Crect x='128' y='9' width='2' height='4' rx='1'/%3E%3Crect x='136' y='4' width='2' height='14' rx='1'/%3E%3Crect x='144' y='8' width='2' height='6' rx='1'/%3E%3Crect x='152' y='3' width='2' height='16' rx='1'/%3E%3Crect x='160' y='9' width='2' height='4' rx='1'/%3E%3Crect x='168' y='7' width='2' height='8' rx='1'/%3E%3Crect x='176' y='5' width='2' height='12' rx='1'/%3E%3Crect x='184' y='9' width='2' height='4' rx='1'/%3E%3Crect x='192' y='2' width='2' height='18' rx='1'/%3E%3Crect x='200' y='8' width='2' height='6' rx='1'/%3E%3Crect x='208' y='6' width='2' height='10' rx='1'/%3E%3Crect x='216' y='9' width='2' height='4' rx='1'/%3E%3Crect x='224' y='4' width='2' height='14' rx='1'/%3E%3Crect x='232' y='9' width='2' height='4' rx='1'/%3E%3C/g%3E%3C/svg%3E") repeat-x center/240px 22px;
+  background:linear-gradient(90deg,transparent,currentColor 18%,currentColor 82%,transparent);
+}
+.wave-rule.faint{opacity:.22}
+/* watermark: the motif ghosted into a surface corner */
+.wm{position:absolute;right:-8px;bottom:-6px;width:210px;height:76px;pointer-events:none;opacity:.5;z-index:0}
+.wm svg{width:100%;height:100%;color:var(--accent);opacity:.13}
+.card > *:not(.wm){position:relative;z-index:1}
+/* animated loader / live indicator built from the same shape */
+.wave-load{display:inline-flex;align-items:flex-end;gap:3px;height:20px}
+.wave-load span{width:3px;border-radius:2px;background:var(--accent);animation:vx 1.1s ease-in-out infinite}
+.wave-load span:nth-child(1){height:40%;animation-delay:0s}
+.wave-load span:nth-child(2){height:80%;animation-delay:.12s}
+.wave-load span:nth-child(3){height:55%;animation-delay:.24s}
+.wave-load span:nth-child(4){height:100%;animation-delay:.36s}
+.wave-load span:nth-child(5){height:45%;animation-delay:.48s}
+@keyframes vx{0%,100%{transform:scaleY(.45)}50%{transform:scaleY(1)}}
+@media (prefers-reduced-motion:reduce){.wave-load span{animation:none}}
+
+/* hero spotlight: a soft light that tracks the pointer */
+.spotlight{
+  position:absolute;inset:0;pointer-events:none;z-index:0;
+  background:radial-gradient(520px 340px at var(--mx,50%) var(--my,30%),var(--spot),transparent 70%);
+  transition:opacity .4s ease;
+}
+
+/* editorial: quote band + drop cap */
+.quote-band{
+  border-block:1px solid var(--border);background:var(--bg-2);background-image:var(--bloom);
+  padding:48px 0;position:relative;overflow:hidden;
+}
+.quote-in{display:grid;grid-template-columns:1fr auto;gap:48px;align-items:center}
+@media (max-width:900px){.quote-in{grid-template-columns:1fr;gap:28px}}
+.quote-in blockquote{font-family:'Instrument Serif',Georgia,serif;font-size:clamp(24px,2.8vw,34px);
+  line-height:1.26;letter-spacing:-.012em;max-width:760px}
+.quote-in blockquote em{font-style:italic;color:var(--accent-text)}
+.quote-in cite{display:block;margin-top:16px;font-style:normal;font-size:13px;color:var(--muted)}
+.quote-stats{display:flex;gap:34px;flex-wrap:wrap}
+.quote-stats div b{display:block;font-size:26px;font-weight:600;letter-spacing:-.035em}
+.quote-stats div span{font-size:11.5px;color:var(--muted)}
+.dropcap::first-letter{
+  font-family:'Instrument Serif',Georgia,serif;font-size:3.1em;line-height:.86;float:left;
+  padding:4px 10px 0 0;color:var(--accent-text);
+}
+
+/* ---------- views ---------- */
+.view{display:none}
+.view.active{display:block}
+
+/* ============================================================
+   MARKETING SITE
+   ============================================================ */
+.nav{
+  position:fixed;top:0;left:0;right:0;z-index:200;
+  background:var(--nav-bg);backdrop-filter:blur(18px) saturate(160%);
+  -webkit-backdrop-filter:blur(18px) saturate(160%);
+  border-bottom:1px solid var(--border);
+}
+.nav-in{max-width:1200px;margin:0 auto;padding:0 32px;height:68px;display:flex;align-items:center;justify-content:space-between;gap:24px}
+.nav-links{display:flex;align-items:center;gap:4px}
+.nav-links a{
+  font-size:13.5px;font-weight:500;color:var(--text-2);padding:8px 12px;border-radius:var(--r-xs);
+  transition:color .15s,background .15s;
+}
+.nav-links a:hover{color:var(--text);background:var(--surface-2)}
+.nav-right{display:flex;align-items:center;gap:10px}
+@media (max-width:900px){.nav-links{display:none}.nav-in{padding:0 20px}}
+
+.hero{padding:140px 0 76px;background:var(--bloom);position:relative;overflow:hidden}
+.hero::before{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background-image:linear-gradient(var(--grid-line) 1px,transparent 1px),linear-gradient(90deg,var(--grid-line) 1px,transparent 1px);
+  background-size:64px 64px;
+  mask-image:radial-gradient(760px 420px at 50% 0%,#000,transparent 75%);
+  -webkit-mask-image:radial-gradient(760px 420px at 50% 0%,#000,transparent 75%);
+}
+.hero-in{position:relative;display:grid;grid-template-columns:1.02fr .98fr;gap:52px;align-items:center}
+@media (max-width:1000px){.hero-in{grid-template-columns:1fr;gap:40px}.hero{padding:116px 0 56px}}
+.hero h1{font-size:clamp(40px,5vw,58px);line-height:1.03;margin:18px 0 16px;font-weight:600}
+.hero h1 em{font-family:'Instrument Serif',Georgia,serif;font-style:italic;font-weight:400;letter-spacing:-.01em}
+.hero p.lede{font-size:17px;line-height:1.62;color:var(--text-2);max-width:520px}
+.hero-cta{display:flex;flex-wrap:wrap;gap:11px;margin-top:26px}
+.hero-note{display:flex;flex-wrap:wrap;gap:16px;margin-top:20px;font-size:12.5px;color:var(--muted)}
+.hero-note span{display:inline-flex;align-items:center;gap:7px}
+.hero-note svg{width:13px;height:13px;color:var(--accent)}
+
+/* live call demo */
+.demo{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--r-xl);
+  box-shadow:var(--sh-3);overflow:hidden;
+}
+.demo-top{display:flex;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid var(--border);background:var(--surface-2)}
+.demo-avatar{width:34px;height:34px;border-radius:11px;background:var(--grad-soft);border:1px solid var(--accent-line);
+  display:grid;place-items:center;color:var(--accent-text);font-size:12px;font-weight:600}
+.demo-live{margin-left:auto;display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:600;color:var(--positive);
+  font-family:'JetBrains Mono',monospace;letter-spacing:.08em}
+.demo-live .pulse{width:7px;height:7px;border-radius:50%;background:var(--positive);animation:pulse 1.8s infinite}
+@keyframes pulse{0%,100%{opacity:1;box-shadow:0 0 0 0 var(--positive-soft)}50%{opacity:.55;box-shadow:0 0 0 6px transparent}}
+.demo-wave{display:flex;align-items:center;gap:3px;height:56px;padding:0 20px;border-bottom:1px solid var(--border)}
+.demo-wave span{flex:1;border-radius:2px;background:var(--grad-bar);opacity:.35;transition:opacity .2s,transform .2s;transform-origin:center}
+.demo-wave span.on{opacity:1}
+.demo-body{padding:18px 20px;min-height:236px;display:flex;flex-direction:column;gap:12px}
+.bubble{max-width:86%;padding:11px 14px;border-radius:14px;font-size:13.5px;line-height:1.55;animation:rise .32s cubic-bezier(.2,.7,.3,1) both}
+.bubble .who{font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:4px}
+.bubble.agent{background:var(--surface-2);border:1px solid var(--border);border-bottom-left-radius:5px;align-self:flex-start}
+.bubble.caller{background:var(--accent-soft);border:1px solid var(--accent-line);border-bottom-right-radius:5px;align-self:flex-end;text-align:right}
+@keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.demo-foot{border-top:1px solid var(--border);background:var(--surface-2);padding:16px 20px}
+.chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px;min-height:26px}
+.chip{
+  display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 11px;border-radius:var(--r-pill);
+  background:var(--surface);border:1px solid var(--border-2);font-size:11.5px;font-weight:500;color:var(--text-2);
+  animation:rise .3s cubic-bezier(.2,.7,.3,1) both;
+}
+.chip b{color:var(--text);font-weight:600}
+.demo-replay{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:16px}
+
+/* logo strip */
+.strip{padding:24px 0;border-block:1px solid var(--border);background:var(--bg-2)}
+.strip-in{display:flex;align-items:center;justify-content:center;gap:44px;flex-wrap:wrap;opacity:.62}
+.strip-in span{font-size:15px;font-weight:600;letter-spacing:-.02em;color:var(--muted)}
+.strip-in .serif{font-size:19px}
+
+/* section heads */
+.sec-head{max-width:660px;margin-bottom:34px}
+.sec-head h2{font-size:clamp(27px,3.2vw,38px);margin:14px 0 10px}
+.sec-head h2 em{font-family:'Instrument Serif',Georgia,serif;font-style:italic;font-weight:400}
+.sec-head p{color:var(--text-2);font-size:16px;max-width:560px}
+.sec-head.center{margin-inline:auto;text-align:center}
+.sec-head.split{
+  max-width:none;display:grid;grid-template-columns:1.06fr .94fr;gap:56px;align-items:end;
+  padding-bottom:26px;border-bottom:1px solid var(--border);margin-bottom:28px;
+}
+.sec-head.split h2{margin:12px 0 0}
+.sec-head.split p{font-size:15px;max-width:none;padding-bottom:4px}
+@media (max-width:900px){.sec-head.split{grid-template-columns:1fr;gap:16px;align-items:start}}
+.sec-head.center p{margin-inline:auto}
+
+/* problem / stat row */
+.stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+@media (max-width:860px){.stat-row{grid-template-columns:1fr}}
+.stat{padding:22px 24px;border:1px solid var(--border);border-radius:var(--r-lg);background:var(--surface);position:relative;overflow:hidden}
+.stat::before{content:"";position:absolute;inset:0 auto 0 0;width:2px;background:var(--grad)}
+.stat .big{font-size:38px;font-weight:600;letter-spacing:-.04em;line-height:1;margin-bottom:10px}
+.stat p{font-size:14px;color:var(--text-2)}
+
+/* bento */
+.bento{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.bento .card{padding:22px;display:flex;flex-direction:column;gap:10px;overflow:hidden;position:relative}
+.bento .card.wide{grid-column:span 2}
+@media (max-width:920px){.bento{grid-template-columns:1fr}.bento .card.wide{grid-column:auto}}
+.f-icon{width:38px;height:38px;border-radius:11px;background:var(--accent-soft);border:1px solid var(--accent-line);
+  display:grid;place-items:center;color:var(--accent-text);margin-bottom:6px}
+.f-icon svg{width:17px;height:17px}
+.bento h3{font-size:16px;font-family:'Inter',system-ui,sans-serif;font-weight:600;letter-spacing:-.024em}
+.bento p{font-size:14px;color:var(--text-2)}
+.mini-kv{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin-top:8px;font-size:12.5px}
+.mini-kv dt{color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;padding-top:2px}
+.mini-kv dd{color:var(--text-2)}
+
+/* flow steps */
+.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden;background:var(--surface)}
+@media (max-width:920px){.steps{grid-template-columns:1fr}}
+.step{padding:24px 22px;border-right:1px solid var(--border);position:relative}
+.step:last-child{border-right:none}
+@media (max-width:920px){.step{border-right:none;border-bottom:1px solid var(--border)}.step:last-child{border-bottom:none}}
+.step .n{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent-text);letter-spacing:.1em;margin-bottom:14px;display:block}
+.step h4{font-size:15px;margin-bottom:8px}
+.step p{font-size:13.5px;color:var(--text-2)}
+
+/* pricing */
+.price-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;align-items:start}
+@media (max-width:920px){.price-grid{grid-template-columns:1fr}}
+.tier{padding:26px;border:1px solid var(--border);border-radius:var(--r-lg);background:var(--surface);position:relative;display:flex;flex-direction:column;gap:18px}
+.tier.feature{border-color:transparent;background:
+   linear-gradient(var(--surface),var(--surface)) padding-box,
+   var(--grad) border-box;
+  box-shadow:var(--sh-3);transform:translateY(-8px)}
+@media (max-width:920px){.tier.feature{transform:none}}
+.tier-tag{position:absolute;top:-11px;left:30px;height:22px;padding:0 10px;border-radius:var(--r-pill);
+  background:var(--grad);color:var(--accent-ink);font-size:10.5px;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;display:inline-flex;align-items:center;font-family:'JetBrains Mono',monospace}
+.tier h3{font-size:15px;font-family:'Inter',system-ui,sans-serif;font-weight:600}
+.tier .amt{display:flex;align-items:baseline;gap:6px}
+.tier .amt b{font-size:42px;font-weight:600;letter-spacing:-.04em}
+.tier .amt span{font-size:13px;color:var(--muted)}
+.tier ul{list-style:none;display:flex;flex-direction:column;gap:10px;font-size:13.5px;color:var(--text-2)}
+.tier li{display:flex;gap:9px;align-items:flex-start}
+.tier li svg{width:15px;height:15px;color:var(--accent);flex-shrink:0;margin-top:2px}
+.tier .btn,.tier .btn-ghost{width:100%}
+
+/* faq */
+.faq-grid{display:grid;grid-template-columns:.72fr 1.28fr;gap:56px;align-items:start}
+@media (max-width:900px){.faq-grid{grid-template-columns:1fr;gap:24px}}
+.faq-rail{position:sticky;top:104px}
+.faq{max-width:none}
+.qa{border-bottom:1px solid var(--border)}
+.qa summary{padding:17px 0;font-size:15.5px;font-weight:600;cursor:pointer;list-style:none;display:flex;justify-content:space-between;gap:20px;align-items:center;letter-spacing:-.02em}
+.qa summary::-webkit-details-marker{display:none}
+.qa summary::after{content:"+";font-size:20px;color:var(--muted);font-weight:400;transition:transform .2s}
+.qa[open] summary::after{transform:rotate(45deg)}
+.qa p{padding:0 0 18px;color:var(--text-2);font-size:14.5px;max-width:640px}
+
+/* cta band */
+.cta-band{
+  border:1px solid var(--border);border-radius:var(--r-xl);padding:52px 44px;text-align:center;
+  background:var(--surface);background-image:var(--bloom);box-shadow:var(--sh-3);position:relative;overflow:hidden
+}
+.cta-band h2{font-size:clamp(28px,3.6vw,42px);margin-bottom:16px}
+.cta-band h2 em{font-family:'Instrument Serif',Georgia,serif;font-style:italic;font-weight:400}
+.cta-band p{color:var(--text-2);max-width:520px;margin:0 auto 28px}
+.cta-actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+
+/* footer */
+.foot{border-top:1px solid var(--border);padding:44px 0 30px;background:var(--bg-2)}
+.foot-in{display:flex;justify-content:space-between;gap:40px;flex-wrap:wrap}
+.foot-cols{display:flex;gap:64px;flex-wrap:wrap}
+.foot-col h5{font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--muted);margin-bottom:14px;font-weight:500}
+.foot-col a{display:block;font-size:13.5px;color:var(--text-2);padding:5px 0;transition:color .15s}
+.foot-col a:hover{color:var(--accent-text)}
+.foot-bottom{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;margin-top:34px;padding-top:20px;border-top:1px solid var(--border);font-size:12.5px;color:var(--muted)}
+
+/* ============================================================
+   LOGIN
+   ============================================================ */
+.auth{min-height:100vh;display:grid;grid-template-columns:1.05fr 1fr}
+@media (max-width:940px){.auth{grid-template-columns:1fr}.auth-aside{display:none}}
+.auth-aside{
+  position:relative;padding:48px;display:flex;flex-direction:column;justify-content:space-between;
+  background:var(--bg-2);background-image:var(--bloom);border-right:1px solid var(--border);overflow:hidden;
+}
+.auth-aside::before{
+  content:"";position:absolute;inset:0;
+  background-image:linear-gradient(var(--grid-line) 1px,transparent 1px),linear-gradient(90deg,var(--grid-line) 1px,transparent 1px);
+  background-size:56px 56px;mask-image:radial-gradient(600px 500px at 30% 30%,#000,transparent 78%);
+  -webkit-mask-image:radial-gradient(600px 500px at 30% 30%,#000,transparent 78%);
+}
+.auth-quote{position:relative;max-width:440px}
+.auth-quote p{font-family:'Instrument Serif',Georgia,serif;font-size:30px;line-height:1.28;letter-spacing:-.015em}
+.auth-quote cite{display:block;margin-top:20px;font-style:normal;font-size:13px;color:var(--muted)}
+.auth-metrics{position:relative;display:flex;gap:40px;flex-wrap:wrap}
+.auth-metrics div b{display:block;font-size:26px;font-weight:600;letter-spacing:-.03em}
+.auth-metrics div span{font-size:12px;color:var(--muted)}
+.auth-main{display:grid;place-items:center;padding:40px 24px}
+.auth-card{width:100%;max-width:392px}
+.auth-card h2{font-size:26px;margin:24px 0 8px}
+.auth-card .sub{color:var(--muted);font-size:14px;margin-bottom:28px}
+.field{margin-bottom:16px}
+.field label{display:block;font-size:12.5px;font-weight:500;color:var(--text-2);margin-bottom:7px}
+.input{
+  width:100%;height:46px;padding:0 14px;border-radius:var(--r-sm);
+  background:var(--surface);border:1px solid var(--border-2);color:var(--text);
+  transition:border-color .15s,box-shadow .15s;
+}
+.input::placeholder{color:var(--faint)}
+.input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+textarea.input{height:auto;padding:12px 14px;min-height:110px;resize:vertical;line-height:1.55}
+.auth-err{
+  display:none;margin-bottom:16px;padding:11px 14px;border-radius:var(--r-sm);
+  background:var(--negative-soft);border:1px solid var(--negative);color:var(--negative);font-size:13px;
+}
+.auth-err.show{display:block}
+.auth-foot{margin-top:22px;font-size:12.5px;color:var(--muted);text-align:center}
+.auth-hint{
+  margin-top:24px;padding:12px 14px;border-radius:var(--r-sm);border:1px dashed var(--border-2);
+  font-size:12px;color:var(--muted);font-family:'JetBrains Mono',monospace;line-height:1.7;
+}
+
+/* ============================================================
+   PORTAL SHELL
+   ============================================================ */
+.shell{display:grid;grid-template-columns:264px 1fr;min-height:100vh}
+@media (max-width:1000px){.shell{grid-template-columns:1fr}}
+.side{
+  border-right:1px solid var(--border);background:var(--bg-2);
+  display:flex;flex-direction:column;position:sticky;top:0;height:100vh;
+}
+@media (max-width:1000px){.side{position:static;height:auto;border-right:none;border-bottom:1px solid var(--border)}}
+.side-top{padding:20px 18px 14px}
+.switcher{position:relative;margin-top:16px}
+.switcher-btn{
+  width:100%;display:flex;align-items:center;gap:11px;padding:10px;border-radius:var(--r-md);
+  border:1px solid var(--border);background:var(--surface);transition:border-color .15s,background .15s;text-align:left;
+}
+.switcher-btn:hover{border-color:var(--border-2);background:var(--surface-2)}
+.t-logo{
+  width:34px;height:34px;border-radius:10px;flex-shrink:0;display:grid;place-items:center;
+  background:var(--grad-soft);border:1px solid var(--accent-line);
+  color:var(--accent-text);font-size:12px;font-weight:700;letter-spacing:-.02em;
+}
+.switcher-btn .meta{flex:1;min-width:0;display:block;text-align:left}
+.switcher-btn .name{display:block;font-size:13.5px;font-weight:600;letter-spacing:-.015em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.switcher-btn .plan{display:block;font-size:10.5px;letter-spacing:.1em;color:var(--muted);font-family:'JetBrains Mono',monospace}
+.switcher-btn .caret{color:var(--muted);flex-shrink:0}
+.switcher-menu{
+  position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:80;display:none;
+  background:var(--surface);border:1px solid var(--border-2);border-radius:var(--r-md);
+  box-shadow:var(--sh-3);padding:6px;
+}
+.switcher-menu.open{display:block;animation:rise .16s ease both}
+.switcher-item{display:flex;align-items:center;gap:10px;width:100%;padding:8px;border-radius:var(--r-sm);transition:background .12s;text-align:left}
+.switcher-item:hover{background:var(--surface-2)}
+.switcher-item span span{display:block;text-align:left}
+.switcher-item .name{font-size:13px;font-weight:500}
+.switcher-item .plan{font-size:10.5px;color:var(--muted);font-family:'JetBrains Mono',monospace}
+.switcher-item .tick{margin-left:auto;color:var(--accent);opacity:0}
+.switcher-item.on .tick{opacity:1}
+
+.side-nav{padding:16px 12px;display:flex;flex-direction:column;gap:2px;flex:1;overflow-y:auto}
+.side-nav .lab{padding:12px 10px 6px}
+.nav-item{
+  display:flex;align-items:center;gap:11px;padding:9px 10px;border-radius:var(--r-sm);
+  font-size:13.5px;font-weight:500;color:var(--text-2);transition:color .14s,background .14s;position:relative;width:100%;text-align:left;
+}
+.nav-item svg{width:16px;height:16px;flex-shrink:0;opacity:.75}
+.nav-item:hover{color:var(--text);background:var(--surface-2)}
+.nav-item.on{color:var(--text);background:var(--surface-2)}
+.nav-item.on svg{color:var(--accent);opacity:1}
+.nav-item.on::before{content:"";position:absolute;left:-12px;top:9px;bottom:9px;width:2px;border-radius:0 2px 2px 0;background:var(--accent)}
+.nav-item .count{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--muted)}
+.side-foot{padding:12px;border-top:1px solid var(--border)}
+.user-chip{display:flex;align-items:center;gap:10px;width:100%;padding:8px;border-radius:var(--r-sm);transition:background .14s}
+.user-chip:hover{background:var(--surface-2)}
+.avatar{width:30px;height:30px;border-radius:9px;background:var(--surface-3);border:1px solid var(--border-2);
+  display:grid;place-items:center;font-size:11px;font-weight:600;color:var(--text-2);flex-shrink:0}
+.user-chip .who{flex:1;min-width:0;text-align:left}
+.user-chip .who b{display:block;font-size:12.5px;font-weight:600}
+.user-chip .who span{font-size:11px;color:var(--muted)}
+
+.main{min-width:0;display:flex;flex-direction:column}
+.topbar{
+  position:sticky;top:0;z-index:60;display:flex;align-items:center;gap:16px;padding:0 28px;height:66px;
+  border-bottom:1px solid var(--border);background:var(--nav-bg);
+  backdrop-filter:blur(18px) saturate(160%);-webkit-backdrop-filter:blur(18px) saturate(160%);
+}
+@media (max-width:700px){.topbar{padding:0 16px;height:auto;min-height:66px;flex-wrap:wrap;padding-block:12px}}
+.crumb{display:flex;align-items:baseline;gap:10px;min-width:0}
+.crumb h1{font-size:16px;font-weight:600;letter-spacing:-.025em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.crumb .sep{color:var(--faint)}
+.crumb .sub{font-size:12.5px;color:var(--muted);white-space:nowrap}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:9px}
+.status-pill{
+  display:inline-flex;align-items:center;gap:8px;height:32px;padding:0 12px;border-radius:var(--r-pill);
+  background:var(--positive-soft);color:var(--positive);font-size:12px;font-weight:600;
+}
+.status-pill .wave-load span{background:currentColor;width:2px}
+.range{
+  display:inline-flex;align-items:center;gap:7px;height:36px;padding:0 12px;border-radius:var(--r-sm);
+  border:1px solid var(--border-2);background:var(--surface);font-size:12.5px;font-weight:500;color:var(--text-2);
+  transition:border-color .15s,color .15s;
+}
+.range:hover{border-color:var(--border-3);color:var(--text)}
+.kbd{
+  display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 10px;border-radius:var(--r-sm);
+  border:1px solid var(--border-2);background:var(--surface);font-size:12px;color:var(--muted);transition:border-color .15s,color .15s;
+}
+.kbd:hover{border-color:var(--border-3);color:var(--text)}
+.kbd b{font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:500;padding:2px 5px;border-radius:5px;background:var(--surface-3)}
+@media (max-width:820px){.kbd,.range span.rl{display:none}}
+
+.content{padding:28px;flex:1}
+@media (max-width:700px){.content{padding:18px 16px}}
+.panel{display:none;animation:fade .28s ease both}
+.panel.on{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.mobile-tabs{display:none;gap:6px;padding:10px 16px;overflow-x:auto;border-bottom:1px solid var(--border);background:var(--bg-2)}
+@media (max-width:1000px){.mobile-tabs{display:flex}.side-nav{display:none}.side-foot{display:none}}
+.mobile-tabs button{flex-shrink:0;padding:7px 13px;border-radius:var(--r-pill);font-size:12.5px;font-weight:500;color:var(--muted);border:1px solid transparent}
+.mobile-tabs button.on{color:var(--text);background:var(--surface);border-color:var(--border-2)}
+
+/* ---------- KPI ---------- */
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:20px}
+@media (max-width:1100px){.kpi-row{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:560px){.kpi-row{grid-template-columns:1fr}}
+.kpi{padding:20px;position:relative;overflow:hidden}
+.kpi .lab{margin-bottom:14px}
+.kpi-val{display:flex;align-items:baseline;gap:5px}
+.kpi-val b{font-size:32px;font-weight:600;letter-spacing:-.04em;line-height:1}
+.kpi-val .frac{font-size:15px;color:var(--muted);font-weight:500}
+.kpi-foot{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;margin-top:16px}
+.kpi-foot .meta{min-width:0}
+.kpi-note{display:block;font-size:10.5px;color:var(--faint);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.delta{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;white-space:nowrap}
+.delta.up{color:var(--positive)}
+.delta.down{color:var(--negative)}
+.delta.flat{color:var(--muted)}
+.delta svg{width:11px;height:11px}
+.spark{width:84px;height:28px;flex-shrink:0;opacity:.95}
+
+/* ---------- charts ---------- */
+.grid-2{display:grid;grid-template-columns:1.6fr 1fr;gap:16px;margin-bottom:20px}
+@media (max-width:1000px){.grid-2{grid-template-columns:1fr}}
+.bars{display:flex;align-items:flex-end;gap:12px;height:190px;padding-top:20px;position:relative}
+.bars::before{
+  content:"";position:absolute;inset:20px 0 26px;pointer-events:none;
+  background-image:repeating-linear-gradient(to top,var(--grid-line) 0 1px,transparent 1px 25%);
+}
+.bar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;height:100%;justify-content:flex-end;position:relative}
+.bar{
+  width:100%;max-width:44px;border-radius:7px 7px 3px 3px;background:var(--surface-3);
+  transition:transform .18s ease,filter .18s ease;position:relative;
+}
+.bar-col.peak .bar{background:var(--grad-bar);box-shadow:0 8px 22px -10px var(--accent)}
+.bar-col:hover .bar{transform:scaleY(1.02);filter:brightness(1.15)}
+.bar-v{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500;color:var(--text-2)}
+.bar-d{font-size:11px;color:var(--muted)}
+.bar-col.peak .bar-d{color:var(--accent-text);font-weight:600}
+
+.seg{display:flex;height:8px;border-radius:99px;overflow:hidden;gap:2px;margin-bottom:18px}
+.seg i{display:block;height:100%;border-radius:99px}
+.out-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)}
+.out-row:last-child{border-bottom:none}
+.out-dot{width:8px;height:8px;border-radius:3px;flex-shrink:0}
+.out-row .n{font-size:13.5px;flex:1;color:var(--text-2)}
+.out-row .v{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:500}
+.out-row .p{font-size:11.5px;color:var(--muted);width:38px;text-align:right}
+
+/* ---------- calls ---------- */
+.filters{display:flex;gap:7px;flex-wrap:wrap}
+.f-chip{
+  height:32px;padding:0 13px;border-radius:var(--r-pill);border:1px solid var(--border);
+  background:var(--surface);font-size:12.5px;font-weight:500;color:var(--muted);
+  transition:color .14s,border-color .14s,background .14s;display:inline-flex;align-items:center;gap:7px;
+}
+.f-chip:hover{color:var(--text);border-color:var(--border-2)}
+.f-chip.on{color:var(--accent-ink);background:var(--accent);border-color:var(--accent);font-weight:600}
+.f-chip .c{font-family:'JetBrains Mono',monospace;font-size:10.5px;opacity:.7}
+
+.call-list{display:flex;flex-direction:column}
+.call{border-bottom:1px solid var(--border)}
+.call:last-child{border-bottom:none}
+.call-head{display:flex;align-items:center;gap:14px;padding:14px 4px;width:100%;text-align:left;transition:background .14s;border-radius:var(--r-sm)}
+.call-head:hover{background:var(--surface-2)}
+.wave{display:flex;align-items:center;gap:2px;width:64px;height:26px;flex-shrink:0}
+.wave span{flex:1;border-radius:1.5px;background:var(--muted);opacity:.45}
+.call.qualified .wave span{background:var(--positive);opacity:.65}
+.call.booked .wave span{background:var(--accent);opacity:.7}
+.call.lost .wave span{background:var(--negative);opacity:.55}
+.call-who{flex:1;min-width:0}
+.call-who b{display:block;font-size:13.5px;font-weight:600;letter-spacing:-.015em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.call-who span{font-size:11.5px;color:var(--muted);font-family:'JetBrains Mono',monospace}
+.call-dur{font-family:'JetBrains Mono',monospace;font-size:12.5px;color:var(--text-2);flex-shrink:0}
+.call-caret{color:var(--faint);transition:transform .2s;flex-shrink:0}
+.call.open .call-caret{transform:rotate(180deg)}
+.call-body{display:none;padding:4px 4px 22px}
+.call.open .call-body{display:block;animation:fade .24s ease both}
+.player{display:flex;align-items:center;gap:14px;padding:12px 14px;border-radius:var(--r-md);background:var(--surface-2);border:1px solid var(--border);margin-bottom:16px}
+.play-btn{width:34px;height:34px;border-radius:50%;background:var(--grad);color:var(--accent-ink);display:grid;place-items:center;flex-shrink:0;
+  box-shadow:0 6px 16px -8px var(--accent)}
+.play-btn svg{width:13px;height:13px}
+.track{flex:1;height:4px;border-radius:99px;background:var(--scrub);position:relative;cursor:pointer}
+.track i{position:absolute;inset:0 auto 0 0;width:0%;border-radius:99px;background:var(--accent);transition:width .12s linear}
+.track i::after{content:"";position:absolute;right:-5px;top:50%;transform:translateY(-50%);width:10px;height:10px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.player .t{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--muted);flex-shrink:0}
+.turn{display:flex;gap:12px;padding:9px 0}
+.turn .sp{width:64px;flex-shrink:0;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding-top:3px}
+.turn.agent .sp{color:var(--accent-text)}
+.turn p{font-size:13.5px;color:var(--text-2);line-height:1.6}
+.brief{margin-top:16px;padding:16px;border-radius:var(--r-md);border:1px dashed var(--accent-line);background:var(--accent-soft)}
+.brief-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:14px;margin-top:12px}
+.brief-grid div span{display:block;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.11em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+.brief-grid div b{font-size:13px;font-weight:600}
+.brief-link{display:inline-flex;align-items:center;gap:6px;margin-top:14px;font-size:12.5px;font-weight:600;color:var(--accent-text)}
+
+/* ---------- kanban ---------- */
+.kanban{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;align-items:start}
+@media (max-width:1100px){.kanban{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:640px){.kanban{grid-template-columns:1fr}}
+.col{background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-lg);padding:14px;min-height:220px;transition:border-color .16s,background .16s}
+.col.drag{border-color:var(--accent);background:var(--accent-soft)}
+.col-head{display:flex;align-items:center;gap:9px;margin-bottom:14px;padding:0 2px}
+.col-head .dot{width:7px;height:7px;border-radius:2px}
+.col-head b{font-size:12.5px;font-weight:600;flex:1;letter-spacing:-.01em}
+.col-head .c{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted)}
+.lead{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);padding:13px;margin-bottom:9px;
+  cursor:grab;transition:transform .16s ease,box-shadow .16s ease,border-color .16s;box-shadow:var(--sh-1);
+}
+.lead:hover{transform:translateY(-2px);box-shadow:var(--sh-2);border-color:var(--border-2)}
+.lead.dragging{opacity:.4;cursor:grabbing}
+.lead b{display:block;font-size:13px;font-weight:600;margin-bottom:5px;letter-spacing:-.015em}
+.lead p{font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:9px}
+.lead-tags{display:flex;flex-wrap:wrap;gap:5px}
+.tag{font-size:10.5px;font-weight:500;padding:3px 8px;border-radius:var(--r-pill);background:var(--surface-3);color:var(--text-2)}
+.col-empty{border:1px dashed var(--border-2);border-radius:var(--r-md);padding:16px;text-align:center;font-size:12px;color:var(--faint);
+  display:flex;flex-direction:column;align-items:center;gap:8px}
+.col-empty .wave-load{opacity:.35;height:14px}
+
+/* ---------- billing / tables / kv ---------- */
+.usage-track{height:8px;border-radius:99px;background:var(--surface-3);overflow:hidden;margin:18px 0 10px}
+.usage-fill{height:100%;border-radius:99px;background:var(--grad);width:0;transition:width 1s cubic-bezier(.2,.7,.3,1)}
+.usage-foot{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);font-family:'JetBrains Mono',monospace}
+table{width:100%;border-collapse:collapse}
+th{
+  text-align:left;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--muted);font-weight:500;padding:0 12px 12px 0;border-bottom:1px solid var(--border);
+}
+td{padding:13px 12px 13px 0;border-bottom:1px solid var(--border);font-size:13.5px;color:var(--text-2)}
+tr:last-child td{border-bottom:none}
+td.id{font-family:'JetBrains Mono',monospace;font-size:12.5px;color:var(--text)}
+td.amt{font-family:'JetBrains Mono',monospace;font-weight:500;color:var(--text);text-align:right}
+th.r{text-align:right;padding-right:0}
+.kv{display:grid;grid-template-columns:220px 1fr;gap:0}
+@media (max-width:760px){.kv{grid-template-columns:1fr}}
+.kv dt{padding:14px 0;font-size:12.5px;color:var(--muted);border-bottom:1px solid var(--border)}
+.kv dd{padding:14px 0;font-size:13.5px;border-bottom:1px solid var(--border);color:var(--text)}
+@media (max-width:760px){.kv dt{padding-bottom:2px;border-bottom:none}.kv dd{padding-top:2px}}
+.kv dt:last-of-type,.kv dd:last-of-type{border-bottom:none}
+.notice{display:flex;gap:12px;align-items:flex-start;padding:14px 16px;border-radius:var(--r-md);background:var(--warning-soft);border:1px solid var(--warning);margin-bottom:20px}
+.notice svg{width:16px;height:16px;color:var(--warning);flex-shrink:0;margin-top:2px}
+.notice p{font-size:13px;color:var(--text-2)}
+.notice b{color:var(--text)}
+.empty{padding:52px 20px;text-align:center}
+.empty .ring{width:48px;height:48px;border-radius:15px;background:var(--surface-2);border:1px solid var(--border);
+  display:grid;place-items:center;margin:0 auto 16px;color:var(--faint);box-shadow:var(--inner-hl)}
+.empty b{display:block;font-family:'Instrument Serif',Georgia,serif;font-weight:400;font-size:20px;letter-spacing:-.01em;margin-bottom:6px}
+.empty p{font-size:13px;color:var(--muted)}
+
+/* ---------- modal, palette, toast ---------- */
+.scrim{position:fixed;inset:0;z-index:300;background:var(--overlay);backdrop-filter:blur(6px);display:none;place-items:center;padding:24px}
+.scrim.open{display:grid;animation:fade .18s ease both}
+.modal{width:100%;max-width:460px;background:var(--surface);border:1px solid var(--border-2);border-radius:var(--r-xl);box-shadow:var(--sh-3);padding:26px}
+.modal h3{font-family:'Instrument Serif',Georgia,serif;font-weight:400;font-size:22px;letter-spacing:-.01em;margin-bottom:8px}
+.modal .sub{font-size:13px;color:var(--muted);margin-bottom:20px}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:18px}
+.palette{width:100%;max-width:540px;background:var(--surface);border:1px solid var(--border-2);border-radius:var(--r-lg);box-shadow:var(--sh-3);overflow:hidden;align-self:start;margin-top:12vh}
+.palette input{width:100%;height:54px;padding:0 18px;background:transparent;border:none;color:var(--text);font-size:15px;outline:none;border-bottom:1px solid var(--border)}
+.palette-list{max-height:320px;overflow-y:auto;padding:8px}
+.p-item{display:flex;align-items:center;gap:12px;width:100%;padding:10px 12px;border-radius:var(--r-sm);text-align:left;transition:background .12s}
+.p-item:hover,.p-item.sel{background:var(--surface-2)}
+.p-item svg{width:15px;height:15px;color:var(--muted)}
+.p-item b{font-size:13.5px;font-weight:500;flex:1}
+.p-item span{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--faint)}
+.toasts{position:fixed;bottom:24px;right:24px;z-index:400;display:flex;flex-direction:column;gap:10px}
+.toast{
+  display:flex;align-items:center;gap:11px;padding:13px 16px;border-radius:var(--r-md);
+  background:var(--surface);border:1px solid var(--border-2);box-shadow:var(--sh-3);font-size:13px;font-weight:500;
+  animation:rise .22s cubic-bezier(.2,.7,.3,1) both;
+}
+.toast svg{width:15px;height:15px;color:var(--accent)}
+
+/* preview switcher: dev aid, strip in production */
+.preview{
+  position:fixed;bottom:22px;left:50%;transform:translateX(-50%);z-index:500;display:flex;gap:3px;padding:5px;
+  border-radius:var(--r-pill);background:var(--nav-bg);border:1px solid var(--border-2);
+  backdrop-filter:blur(18px) saturate(160%);-webkit-backdrop-filter:blur(18px) saturate(160%);box-shadow:var(--sh-3);
+}
+.preview button{padding:7px 15px;border-radius:var(--r-pill);font-size:12px;font-weight:500;color:var(--muted);transition:color .14s,background .14s}
+.preview button.on{color:var(--accent-ink);background:var(--accent)}
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     VIEW 1: MARKETING SITE
+     ============================================================ -->
+<div class="view active" id="view-site">
+
+<header class="nav">
+  <div class="nav-in">
+    <a class="logo" href="#top">
+      <span class="logo-mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 10v4M8 6v12M12 3v18M16 7v10M20 10v4"/></svg></span>
+      Voxline
+    </a>
+    <nav class="nav-links">
+      <a href="#how">How it works</a>
+      <a href="#product">Product</a>
+      <a href="#features">Features</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#faq">FAQ</a>
+    </nav>
+    <div class="nav-right">
+      <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
+        <svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+        <svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z"/></svg>
+      </button>
+      <button class="btn-ghost sm" onclick="showView('login')">Client login</button>
+      <button class="btn sm" onclick="showView('login')">Book a demo</button>
+    </div>
+  </div>
+</header>
+
+<section class="hero" id="top">
+  <div class="spotlight" id="spot"></div>
+  <div class="container hero-in">
+    <div>
+      <span class="eyebrow"><span style="width:5px;height:5px;border-radius:50%;background:currentColor"></span> Built for travel agencies</span>
+      <h1>The front desk that <em>never</em> puts a traveller on hold.</h1>
+      <p class="lede">Voxline answers every call your agency can't, asks the questions your consultants would ask, and files a complete trip brief in your pipeline before the caller has hung up.</p>
+      <div class="hero-cta">
+        <button class="btn lg" onclick="showView('login')">Book a 20-min demo</button>
+        <button class="btn-ghost lg" onclick="showView('login')">See the client portal</button>
+      </div>
+      <div class="hero-note">
+        <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> Live in 5 business days</span>
+        <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> Keep your existing number</span>
+        <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> No contract, cancel monthly</span>
+      </div>
+    </div>
+
+    <div class="demo">
+      <div class="demo-top">
+        <div class="demo-avatar">VX</div>
+        <div>
+          <div style="font-size:13px;font-weight:600;letter-spacing:-.015em">Blue Harbor Trip Line</div>
+          <div class="mono" style="font-size:11px;color:var(--muted)">+1 (305) 555-0122</div>
+        </div>
+        <div class="demo-live"><span class="pulse"></span> LIVE</div>
+      </div>
+      <div class="demo-wave" id="demoWave"></div>
+      <div class="demo-body" id="demoBody"></div>
+      <div class="demo-foot">
+        <span class="lab">Trip brief · captured automatically</span>
+        <div class="chips" id="demoChips"></div>
+        <div class="demo-replay">
+          <span class="mono" style="font-size:11px;color:var(--faint)" id="demoStamp">Call 04:12 · outcome pending</span>
+          <button class="btn-ghost sm" id="replayBtn" onclick="runDemo()">Replay call</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="strip">
+  <div class="container strip-in">
+    <span class="serif">Blue Harbor Travel</span>
+    <span>WANDERLUX</span>
+    <span class="serif">Meridian &amp; Co.</span>
+    <span>ATLAS VOYAGES</span>
+    <span class="serif">Northbound Travel</span>
+  </div>
+</div>
+
+<section class="block" id="how">
+  <div class="container">
+    <div class="sec-head split">
+      <div>
+        <span class="eyebrow">The problem</span>
+        <h2>Every missed call is a trip <em>someone else</em> books.</h2>
+      </div>
+      <p class="dropcap">Travel agencies lose most of their inbound demand outside office hours, during peak season, and while every consultant is already on the phone. Voxline picks up all of it, on the first ring, in the caller's own language.</p>
+    </div>
+    <div class="stat-row">
+      <div class="stat"><div class="big num">62%</div><p>of inbound agency calls come in after hours or while every consultant is busy.</p></div>
+      <div class="stat"><div class="big num">8 sec</div><p>is how long the average traveller waits before hanging up and calling a competitor.</p></div>
+      <div class="stat"><div class="big num">$4,100</div><p>average booking value walking out the door with each unanswered inquiry.</p></div>
+    </div>
+  </div>
+</section>
+
+<div class="quote-band">
+  <div class="container quote-in">
+    <div>
+      <blockquote>“The agent captured <em>thirty-one</em> trip briefs last month while the office was dark. That is a consultant's entire quarter of after-hours work, answered on the first ring.”</blockquote>
+      <cite>Sofia Marchetti, Director, Blue Harbor Travel</cite>
+    </div>
+    <div class="quote-stats">
+      <div><b class="num">98.6%</b><span>pick-up rate</span></div>
+      <div><b class="num">31</b><span>briefs after hours</span></div>
+      <div><b class="num">&lt;60s</b><span>into the pipeline</span></div>
+    </div>
+  </div>
+</div>
+
+<section class="block" id="product" style="padding-top:0">
+  <div class="container">
+    <div class="sec-head split">
+      <div>
+        <span class="eyebrow">How it works</span>
+        <h2>Four steps. No new software for your team to learn.</h2>
+      </div>
+      <p>Your consultants keep working the way they already do. The only thing that changes is that nothing rings out, and the inquiries waiting for them in the morning are already qualified.</p>
+    </div>
+    <hr class="wave-rule faint" style="margin:0 0 26px">
+    <div class="steps">
+      <div class="step"><span class="n">01</span><h4>Forward your line</h4><p>Point your existing number at Voxline, or use a new one we provision. Nothing else changes.</p></div>
+      <div class="step"><span class="n">02</span><h4>The agent answers</h4><p>A natural voice greets the caller in your agency's tone and asks your qualification questions.</p></div>
+      <div class="step"><span class="n">03</span><h4>Trip brief is filed</h4><p>Destination, dates, party size, budget and occasion land in your pipeline as a structured card.</p></div>
+      <div class="step"><span class="n">04</span><h4>Your consultant closes</h4><p>Your team wakes up to warm, pre-qualified inquiries instead of a voicemail box.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="block" id="features" style="padding-top:0">
+  <div class="container">
+    <div class="sec-head split">
+      <div>
+        <span class="eyebrow">The platform</span>
+        <h2>A portal your clients will actually <em>open</em> every morning.</h2>
+      </div>
+      <p>Every call, transcript, recording and inquiry in one place, with the numbers that tell you whether the phone line is paying for itself. Dark or light, on any device, with your agency's name on it.</p>
+    </div>
+    <div class="bento">
+      <div class="card wide" style="padding:22px">
+        <span class="wm"><svg viewBox="0 0 240 60" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M6 24 v12"/><path d="M18 16 v28"/><path d="M30 6 v48"/><path d="M42 21 v18"/><path d="M54 3 v54"/><path d="M66 25 v10"/><path d="M78 13 v34"/><path d="M90 19 v22"/><path d="M102 4 v52"/><path d="M114 23 v14"/><path d="M126 10 v40"/><path d="M138 17 v26"/><path d="M150 2 v56"/><path d="M162 22 v16"/><path d="M174 12 v36"/><path d="M186 20 v20"/><path d="M198 6 v48"/><path d="M210 24 v12"/><path d="M222 15 v30"/><path d="M234 21 v18"/></svg></span>
+        <div class="f-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3v18h18"/><path d="M7 15l4-5 4 3 5-7"/></svg></div>
+        <h3>Live performance, not a monthly PDF</h3>
+        <p>Calls handled, inquiries captured, average handle time and minutes against your plan, each with a seven-day trend and a comparison to the week before.</p>
+        <dl class="mini-kv">
+          <dt>Refresh</dt><dd>Under 60 seconds from call end</dd>
+          <dt>Ranges</dt><dd>7 / 30 / 90 days</dd>
+        </dl>
+      </div>
+      <div class="card" style="padding:22px">
+        <div class="f-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2a3 3 0 013 3v6a3 3 0 01-6 0V5a3 3 0 013-3z"/><path d="M19 10a7 7 0 01-14 0M12 17v4"/></svg></div>
+        <h3>Recordings &amp; transcripts</h3>
+        <p>Play any call, read the speaker-labelled transcript, and see exactly what the agent promised the traveller.</p>
+      </div>
+      <div class="card" style="padding:22px">
+        <div class="f-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="10" rx="1.5"/><rect x="17" y="4" width="4" height="7" rx="1.5"/></svg></div>
+        <h3>Trip pipeline</h3>
+        <p>Qualified calls become cards in New Inquiry, Quoted, Booked and Traveling. Drag them as the trip progresses.</p>
+      </div>
+      <div class="card wide" style="padding:22px">
+        <span class="wm"><svg viewBox="0 0 240 60" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M6 24 v12"/><path d="M18 16 v28"/><path d="M30 6 v48"/><path d="M42 21 v18"/><path d="M54 3 v54"/><path d="M66 25 v10"/><path d="M78 13 v34"/><path d="M90 19 v22"/><path d="M102 4 v52"/><path d="M114 23 v14"/><path d="M126 10 v40"/><path d="M138 17 v26"/><path d="M150 2 v56"/><path d="M162 22 v16"/><path d="M174 12 v36"/><path d="M186 20 v20"/><path d="M198 6 v48"/><path d="M210 24 v12"/><path d="M222 15 v30"/><path d="M234 21 v18"/></svg></span>
+        <div class="f-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20"/></svg></div>
+        <h3>Billing without the awkward conversation</h3>
+        <p>A live usage bar against your included minutes, the exact next invoice amount, the auto-bill date and every past invoice as a downloadable PDF. Overage is billed per minute, never as a surprise.</p>
+      </div>
+      <div class="card" style="padding:22px">
+        <div class="f-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+        <h3>Your data stays yours</h3>
+        <p>Separate, row-level isolated storage per agency. Private recordings, configurable retention, deletion on request.</p>
+      </div>
+      <div class="card" style="padding:22px">
+        <div class="f-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 4h16v12H7l-3 3V4z"/></svg></div>
+        <h3>Concierge changes</h3>
+        <p>Want the agent to ask a new question? Send a change request from the portal and we ship it, usually same day.</p>
+      </div>
+      <div class="card" style="padding:22px">
+        <div class="f-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.6 3 2.6 15 0 18M12 3c-2.6 3-2.6 15 0 18"/></svg></div>
+        <h3>Multilingual by default</h3>
+        <p>English, Spanish, French, German, Japanese and more, and the agent switches to the caller's language mid-call.</p>
+      </div>
+      <div class="card" style="padding:22px">
+        <div class="f-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 2l4 4-4 4"/><path d="M3 6h18M7 22l-4-4 4-4"/><path d="M21 18H3"/></svg></div>
+        <h3>Syncs to your CRM</h3>
+        <p>Every qualified inquiry can be pushed to HubSpot or Salesforce as a contact and a deal, automatically.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="block" id="pricing" style="padding-top:0">
+  <div class="container">
+    <div class="sec-head center">
+      <span class="eyebrow">Pricing</span>
+      <h2>Priced like a part-time hire. Works like <em>three</em>.</h2>
+      <p>Monthly plans include voice minutes. Go over and you are billed per minute. The agent never stops answering.</p>
+    </div>
+    <div class="price-grid">
+      <div class="tier">
+        <h3>Starter</h3>
+        <div class="amt"><b class="num">$199</b><span>/ month</span></div>
+        <p style="font-size:13px;color:var(--muted)">For a single-location agency testing the water.</p>
+        <ul>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg> 800 minutes included</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg> $0.18 / min overage</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg> One voice agent, one number</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg> Portal, transcripts, pipeline</li>
+        </ul>
+        <button class="btn-ghost" onclick="showView('login')">Start with Starter</button>
+      </div>
+      <div class="tier feature">
+        <span class="tier-tag">Most agencies</span>
+        <h3>Growth</h3>
+        <div class="amt"><b class="num">$499</b><span>/ month</span></div>
+        <p style="font-size:13px;color:var(--muted)">For agencies whose phone rings all season.</p>
+        <ul>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg> 2,500 minutes included</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg> $0.14 / min overage</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg> Multilingual agent + escalation</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg> CRM sync, daily digest email</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg> Same-day change requests</li>
+        </ul>
+        <button class="btn" onclick="showView('login')">Book a demo</button>
+      </div>
+      <div class="tier">
+        <h3>Scale</h3>
+        <div class="amt"><b class="num">Custom</b></div>
+        <p style="font-size:13px;color:var(--muted)">Multi-brand groups and franchise networks.</p>
+        <ul>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg> 6,000+ minutes, volume rates</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg> Multiple brands, one login</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg> White-label portal &amp; domain</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg> Named onboarding manager</li>
+        </ul>
+        <button class="btn-ghost" onclick="showView('login')">Talk to us</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="block" id="faq" style="padding-top:0">
+  <div class="container faq-grid">
+    <div class="faq-rail">
+      <span class="eyebrow">Questions</span>
+      <h2 style="font-size:clamp(26px,3vw,34px);margin:14px 0 12px">The things agencies <em class="serif-i">ask us first</em></h2>
+      <p style="font-size:14px;color:var(--text-2);max-width:300px">Still unsure? Book the demo and we will answer it with your own agent on the line.</p>
+      <button class="btn-ghost sm" style="margin-top:18px" onclick="showView('login')">Book a demo</button>
+      <div class="card" style="padding:16px;margin-top:26px;max-width:300px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span class="wave-load" style="height:16px"><span></span><span></span><span></span><span></span><span></span></span>
+          <span class="lab" style="color:var(--accent-text)">Answering now</span>
+        </div>
+        <p style="font-size:13px;color:var(--text-2);margin-top:10px">Call the demo line and speak to a Voxline agent yourself, no form first.</p>
+        <a class="mono" href="tel:+13055550122" style="display:inline-block;margin-top:10px;font-size:13px;color:var(--accent-text);font-weight:500">+1 (305) 555-0122</a>
+      </div>
+    </div>
+    <div class="faq">
+    <details class="qa" open><summary>Will callers know they are talking to an AI?</summary><p>Most do not ask. The agent introduces itself by your agency name and speaks naturally. If a caller asks directly, it answers honestly and offers to put them through to a human on your escalation number.</p></details>
+    <details class="qa"><summary>Do we have to change our phone number?</summary><p>No. You forward your existing line to Voxline, either always or only after hours and on busy. You can revert the forwarding at any moment without involving us.</p></details>
+    <details class="qa"><summary>What happens when we run out of included minutes?</summary><p>The agent keeps answering. Extra minutes are billed at your plan's per-minute rate on the next invoice, and the portal shows your usage against the plan every day so it is never a surprise.</p></details>
+    <details class="qa"><summary>Can it book trips or take payments?</summary><p>Not in v1, by design. Voxline qualifies and captures. Your consultants sell. Anything involving money or a confirmed booking is handed to a human.</p></details>
+    <details class="qa"><summary>How long does onboarding take?</summary><p>Five business days. Day one we script your agent from a 45-minute call, days two to four we test it against real scenarios with you, day five you go live.</p></details>
+    </div>
+  </div>
+</section>
+
+<section class="block" style="padding-top:0">
+  <div class="container">
+    <div class="cta-band">
+      <hr class="wave-rule" style="max-width:320px;margin:0 auto 22px;opacity:.35">
+      <h2>Hear your own agent, on your own <em>script</em>.</h2>
+      <p>Book 20 minutes. We will build a working agent for your agency and call you with it before the meeting ends.</p>
+      <div class="cta-actions">
+        <button class="btn lg" onclick="showView('login')">Book a demo</button>
+        <button class="btn-ghost lg" onclick="showView('login')">Explore the portal</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer class="foot">
+  <div class="container">
+    <div class="foot-in">
+      <div style="max-width:280px">
+        <a class="logo" href="#top">
+          <span class="logo-mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 10v4M8 6v12M12 3v18M16 7v10M20 10v4"/></svg></span>
+          Voxline
+        </a>
+        <p style="font-size:13px;color:var(--muted);margin-top:14px">AI voice agents that answer, qualify and file every travel inquiry your agency receives.</p>
+      </div>
+      <div class="foot-cols">
+        <div class="foot-col"><h5>Product</h5><a href="#how">How it works</a><a href="#features">Features</a><a href="#pricing">Pricing</a><a href="#" onclick="showView('login');return false">Client login</a></div>
+        <div class="foot-col"><h5>Company</h5><a href="#">About</a><a href="#">Contact</a><a href="#">Careers</a></div>
+        <div class="foot-col"><h5>Legal</h5><a href="#">Privacy</a><a href="#">Terms</a><a href="#">Call recording policy</a><a href="#">DPA</a></div>
+      </div>
+    </div>
+    <div class="foot-bottom">
+      <span>© 2026 Voxline. A product of Oltaflock AI LLP.</span>
+      <span class="mono" style="font-size:11px">Made in Ahmedabad · Answering worldwide</span>
+    </div>
+  </div>
+</footer>
+</div>
+
+<!-- ============================================================
+     VIEW 2: LOGIN
+     ============================================================ -->
+<div class="view" id="view-login">
+  <div class="auth">
+    <aside class="auth-aside">
+      <a class="logo" href="#" onclick="showView('site');return false">
+        <span class="logo-mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 10v4M8 6v12M12 3v18M16 7v10M20 10v4"/></svg></span>
+        Voxline
+      </a>
+      <span class="wm" style="right:24px;bottom:24px;width:280px;height:96px;opacity:.9"><svg viewBox="0 0 240 60" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M6 24 v12"/><path d="M18 16 v28"/><path d="M30 6 v48"/><path d="M42 21 v18"/><path d="M54 3 v54"/><path d="M66 25 v10"/><path d="M78 13 v34"/><path d="M90 19 v22"/><path d="M102 4 v52"/><path d="M114 23 v14"/><path d="M126 10 v40"/><path d="M138 17 v26"/><path d="M150 2 v56"/><path d="M162 22 v16"/><path d="M174 12 v36"/><path d="M186 20 v20"/><path d="M198 6 v48"/><path d="M210 24 v12"/><path d="M222 15 v30"/><path d="M234 21 v18"/></svg></span>
+      <div class="auth-quote">
+        <p>“We stopped losing the after-hours calls. Last month the agent captured <span class="serif-i">thirty-one</span> trip briefs while the office was dark.”</p>
+        <cite>Sofia Marchetti · Director, Blue Harbor Travel</cite>
+      </div>
+      <div class="auth-metrics">
+        <div><b class="num">1,240</b><span>calls answered this month</span></div>
+        <div><b class="num">98.6%</b><span>pick-up rate</span></div>
+        <div><b class="num">&lt;60s</b><span>brief in your pipeline</span></div>
+      </div>
+    </aside>
+
+    <main class="auth-main">
+      <div class="auth-card">
+        <a class="logo" href="#" onclick="showView('site');return false">
+          <span class="logo-mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 10v4M8 6v12M12 3v18M16 7v10M20 10v4"/></svg></span>
+          Voxline
+        </a>
+        <h2>Welcome back</h2>
+        <div class="sub">Sign in to your agency portal.</div>
+        <div class="auth-err" id="authErr">Enter both your email and password to continue.</div>
+        <form id="loginForm" novalidate>
+          <div class="field">
+            <label for="email">Work email</label>
+            <input class="input" type="email" id="email" placeholder="you@youragency.com" autocomplete="email" value="sofia@blueharbortravel.com">
+          </div>
+          <div class="field">
+            <label for="pass">Password</label>
+            <input class="input" type="password" id="pass" placeholder="••••••••••" autocomplete="current-password" value="voxline-demo">
+          </div>
+          <button class="btn" type="submit" style="width:100%;margin-top:6px">Sign in</button>
+        </form>
+        <div class="auth-foot">Trouble signing in? <a href="#" style="color:var(--accent-text);font-weight:600">Email support</a></div>
+        <div class="auth-hint">demo · any email + password works<br>prototype only, no real auth</div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- ============================================================
+     VIEW 3: CLIENT PORTAL
+     ============================================================ -->
+<div class="view" id="view-app">
+  <div class="shell">
+    <aside class="side">
+      <div class="side-top">
+        <a class="logo" href="#" onclick="showView('site');return false" style="font-size:15px">
+          <span class="logo-mark" style="width:26px;height:26px;border-radius:8px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 10v4M8 6v12M12 3v18M16 7v10M20 10v4"/></svg></span>
+          Voxline
+        </a>
+        <div class="switcher">
+          <button class="switcher-btn" onclick="toggleSwitcher(event)">
+            <span class="t-logo" id="swLogo">BH</span>
+            <span class="meta"><span class="name" id="swName">Blue Harbor Travel</span><span class="plan" id="swPlan">GROWTH</span></span>
+            <svg class="caret" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div class="switcher-menu" id="swMenu" role="menu"></div>
+        </div>
+      </div>
+
+      <nav class="side-nav" id="sideNav">
+        <span class="lab">Workspace</span>
+        <button class="nav-item on" data-tab="overview" onclick="go('overview')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg> Overview</button>
+        <button class="nav-item" data-tab="calls" onclick="go('calls')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 16.9v3a2 2 0 01-2.2 2 19.8 19.8 0 01-8.6-3.1 19.5 19.5 0 01-6-6A19.8 19.8 0 012.1 4.2 2 2 0 014.1 2h3a2 2 0 012 1.7c.1 1 .4 1.9.7 2.8a2 2 0 01-.5 2.1L8.1 9.9a16 16 0 006 6l1.3-1.2a2 2 0 012.1-.5c.9.3 1.8.6 2.8.7a2 2 0 011.7 2z"/></svg> Calls <span class="count" id="navCallCount">6</span></button>
+        <button class="nav-item" data-tab="leads" onclick="go('leads')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="10" y="4" width="5" height="10" rx="1.5"/><rect x="17" y="4" width="4" height="7" rx="1.5"/></svg> Trip Pipeline <span class="count" id="navLeadCount">6</span></button>
+        <span class="lab">Account</span>
+        <button class="nav-item" data-tab="billing" onclick="go('billing')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20"/></svg> Billing &amp; Usage</button>
+        <button class="nav-item" data-tab="agent" onclick="go('agent')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.9l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.9-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1A1.7 1.7 0 008 19.4a1.7 1.7 0 00-1.9.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.9 1.7 1.7 0 00-1.5-1H2a2 2 0 110-4h.1A1.7 1.7 0 003.6 8a1.7 1.7 0 00-.3-1.9l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.9.3H8a1.7 1.7 0 001-1.5V2a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.9-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.9V8a1.7 1.7 0 001.5 1H22a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg> Agent Setup</button>
+      </nav>
+
+      <div class="side-foot">
+        <button class="user-chip" onclick="logout()">
+          <span class="avatar" id="userInitials">SM</span>
+          <span class="who"><b id="userName">Sofia Marchetti</b><span>Owner · sign out</span></span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="color:var(--faint)"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+        </button>
+      </div>
+    </aside>
+
+    <div class="main">
+      <header class="topbar">
+        <div class="crumb">
+          <h1 id="tbName">Blue Harbor Travel</h1>
+          <span class="sep">/</span>
+          <span class="sub" id="tbTab">Overview</span>
+        </div>
+        <div class="topbar-right">
+          <div class="status-pill"><span class="wave-load" style="height:11px;gap:2px"><span></span><span></span><span></span><span></span><span></span></span> <span id="tbStatus">Agent live</span></div>
+          <button class="range" onclick="toast('Date ranges arrive in Phase 2')"><span class="rl">Last 7 days</span>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg></button>
+          <button class="kbd" onclick="openPalette()">Search <b>⌘K</b></button>
+          <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
+            <svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+            <svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z"/></svg>
+          </button>
+        </div>
+      </header>
+
+      <div class="mobile-tabs" id="mobileTabs">
+        <button class="on" onclick="go('overview')">Overview</button>
+        <button onclick="go('calls')">Calls</button>
+        <button onclick="go('leads')">Pipeline</button>
+        <button onclick="go('billing')">Billing</button>
+        <button onclick="go('agent')">Agent</button>
+      </div>
+
+      <div class="content">
+
+        <!-- OVERVIEW -->
+        <section class="panel on" id="p-overview">
+          <div class="kpi-row" id="kpiRow"></div>
+          <div class="grid-2">
+            <div class="card card-pad">
+              <div class="card-head"><h3>Call volume</h3><span class="card-sub" id="volSub"></span></div>
+              <div class="bars" id="bars"></div>
+            </div>
+            <div class="card card-pad">
+              <div class="card-head"><h3>Outcomes</h3><span class="card-sub" id="outTotal"></span></div>
+              <div class="seg" id="outSeg"></div>
+              <div id="outList"></div>
+            </div>
+          </div>
+          <div class="card card-pad">
+            <div class="card-head"><h3>Recent calls</h3><button class="btn-quiet" onclick="go('calls')">View all
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button></div>
+            <div class="call-list" id="recentCalls"></div>
+          </div>
+        </section>
+
+        <!-- CALLS -->
+        <section class="panel" id="p-calls">
+          <div class="card card-pad">
+            <div class="card-head" style="align-items:center">
+              <h3>Call log</h3>
+              <div class="filters" id="callFilters"></div>
+            </div>
+            <div class="call-list" id="allCalls"></div>
+          </div>
+        </section>
+
+        <!-- PIPELINE -->
+        <section class="panel" id="p-leads">
+          <div class="card-head" style="align-items:center">
+            <div>
+              <h3 class="panel-title">Trip pipeline</h3>
+              <span class="card-sub">Drag a card to move it between stages.</span>
+            </div>
+            <button class="btn-ghost sm" onclick="toast('Manual leads arrive in Phase 2')">+ Add lead</button>
+          </div>
+          <div class="kanban" id="kanban"></div>
+        </section>
+
+        <!-- BILLING -->
+        <section class="panel" id="p-billing">
+          <div class="grid-2">
+            <div class="card card-pad">
+              <div class="card-head"><h3 id="billTitle">Current plan</h3><span class="badge acc" id="billBadge">Growth</span></div>
+              <div class="card-sub" id="billDesc"></div>
+              <div class="usage-track"><div class="usage-fill" id="usageFill"></div></div>
+              <div class="usage-foot"><span id="usageUsed"></span><span id="usageLeft"></span></div>
+              <div style="display:flex;gap:9px;margin-top:22px;flex-wrap:wrap">
+                <button class="btn-ghost sm" onclick="toast('Opens the Stripe customer portal in Phase 2')">Update payment method</button>
+                <button class="btn-ghost sm" onclick="toast('Plan changes go through your account manager')">Change plan</button>
+              </div>
+            </div>
+            <div class="card card-pad">
+              <span class="lab">Next invoice</span>
+              <div class="kpi-val" style="margin-top:12px"><b class="num" id="nextAmt">$499.00</b></div>
+              <div style="font-size:12.5px;color:var(--muted);margin-top:8px" id="nextDate"></div>
+              <hr class="rule" style="margin:20px 0">
+              <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--text-2);margin-bottom:9px"><span>Base plan</span><span class="mono" id="baseAmt"></span></div>
+              <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--text-2)"><span>Overage this period</span><span class="mono" id="overAmt">$0.00</span></div>
+            </div>
+          </div>
+          <div class="card card-pad">
+            <div class="card-head"><h3>Invoice history</h3><span class="card-sub">Paid automatically on file</span></div>
+            <table>
+              <thead><tr><th>Invoice</th><th>Period</th><th>Minutes</th><th>Status</th><th class="r">Amount</th></tr></thead>
+              <tbody id="invoiceRows"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- AGENT SETUP -->
+        <section class="panel" id="p-agent">
+          <div class="notice">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16.5v.01"/></svg>
+            <p><b>Configuration is concierge-managed.</b> Your agent answers a live phone line, so changes are made by the Voxline team rather than edited directly. Send a request and we usually ship it the same day.</p>
+          </div>
+          <div class="card card-pad">
+            <div class="card-head" style="align-items:center">
+              <h3>Agent configuration</h3>
+              <button class="btn sm" onclick="openModal()">Request a change</button>
+            </div>
+            <dl class="kv" id="agentKv"></dl>
+          </div>
+        </section>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- change request modal -->
+<div class="scrim" id="scrim" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <h3>Request a change</h3>
+    <div class="sub">Tell us what the agent should do differently. Our team reviews every request within one business day.</div>
+    <textarea class="input" id="crText" placeholder="e.g. Please also ask callers whether they have travelled with us before, and route Italy inquiries to Marco."></textarea>
+    <div class="modal-actions">
+      <button class="btn-ghost sm" onclick="closeModal()">Cancel</button>
+      <button class="btn sm" onclick="sendChange()">Send request</button>
+    </div>
+  </div>
+</div>
+
+<!-- command palette -->
+<div class="scrim" id="paletteScrim" onclick="if(event.target===this)closePalette()">
+  <div class="palette">
+    <input id="paletteInput" placeholder="Search calls, leads, settings…" autocomplete="off">
+    <div class="palette-list" id="paletteList"></div>
+  </div>
+</div>
+
+<div class="toasts" id="toasts"></div>
+
+<!-- DEV AID: remove from production builds -->
+<div class="preview">
+  <button class="on" id="pv-site" onclick="preview('site')">Site</button>
+  <button id="pv-login" onclick="preview('login')">Login</button>
+  <button id="pv-app" onclick="preview('app')">Portal</button>
+</div>
+
+<script>
+/* ============================================================
+   VOXLINE PROTOTYPE: behaviour layer
+   Prototype only: all data below is fixture data. In production
+   these shapes come from Supabase (see spec §5), so keep the keys.
+   ============================================================ */
+
+/* ---------- theme ---------- */
+function toggleTheme(){
+  const el = document.documentElement;
+  const next = el.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  el.setAttribute('data-theme', next);
+  try{ localStorage.setItem('vx-theme', next); }catch(e){}
+}
+(function(){
+  let saved = null;
+  try{ saved = localStorage.getItem('vx-theme'); }catch(e){}
+  const sys = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', saved || sys);
+})();
+
+/* ---------- view routing ---------- */
+function showView(name){
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('view-' + name).classList.add('active');
+  document.querySelectorAll('.preview button').forEach(b => b.classList.remove('on'));
+  const pv = document.getElementById('pv-' + name);
+  if(pv) pv.classList.add('on');
+  window.scrollTo(0, 0);
+}
+function preview(name){ showView(name); if(name === 'app') render(current); }
+function logout(){ showView('site'); }
+
+document.getElementById('loginForm').addEventListener('submit', function(e){
+  e.preventDefault();
+  const email = document.getElementById('email').value.trim();
+  const pass  = document.getElementById('pass').value.trim();
+  const err   = document.getElementById('authErr');
+  if(!email || !pass){ err.classList.add('show'); return; }
+  err.classList.remove('show');
+  showView('app');
+  render(current);
+});
+
+/* ---------- fixture data ---------- */
+const TENANTS = {
+  blueharbor:{
+    name:"Blue Harbor Travel", initials:"BH", plan:"GROWTH", line:"Trip Inquiry Line",
+    user:{name:"Sofia Marchetti", initials:"SM"},
+    kpis:[
+      {label:"Calls handled",   value:96,   delta:"+21%",   dir:"up",   note:"vs last week", spark:[52,58,54,63,61,72,79,74,88,96]},
+      {label:"Trip inquiries",  value:29,   delta:"+9%",    dir:"up",   note:"vs last week", spark:[14,16,15,18,17,21,22,24,26,29]},
+      {label:"Avg handle time", value:"4:05", delta:"+0:22", dir:"down", note:"vs last week", spark:[3.4,3.5,3.6,3.5,3.7,3.8,3.7,3.9,4.0,4.1]},
+      {label:"Minutes used",    value:612,  frac:"/ 800",   delta:"77% of plan", dir:"flat", note:"resets Aug 18", spark:[80,150,210,280,330,400,450,510,560,612]}
+    ],
+    volume:[{d:"Mon",v:9},{d:"Tue",v:12},{d:"Wed",v:14},{d:"Thu",v:11},{d:"Fri",v:18},{d:"Sat",v:20},{d:"Sun",v:12}],
+    outcomes:[
+      {label:"Trip inquiry captured", n:29, key:"qualified", color:"var(--positive)"},
+      {label:"Quote requested",       n:17, key:"booked",    color:"var(--accent)"},
+      {label:"Voicemail / no answer", n:22, key:"voicemail", color:"var(--muted)"},
+      {label:"Not a fit",             n:28, key:"lost",      color:"var(--negative)"}
+    ],
+    calls:[
+      {who:"Amelie Fournier", when:"Today · 4:32 PM", dur:"5:18", outcome:"qualified", label:"Inquiry captured",
+       brief:{Destination:"Greece", Dates:"Late Sept", Party:"2 travellers", Budget:"~$6,000", Occasion:"Honeymoon"},
+       lines:[["Agent","Thanks for calling Blue Harbor Travel. Where are you dreaming of going?"],
+              ["Amelie","We're thinking Greece in late September, just the two of us."],
+              ["Agent","Lovely time to go. What budget range should we plan around?"],
+              ["Amelie","Around $6,000 total, flights included."],
+              ["Agent","Perfect. Is this a special occasion, by any chance?"],
+              ["Amelie","It's our honeymoon."],
+              ["Agent","Congratulations. I'll flag this for our Mediterranean specialist and she'll call you tomorrow morning."]]},
+      {who:"Jordan Blake", when:"Today · 1:07 PM", dur:"3:42", outcome:"booked", label:"Quote requested",
+       brief:{Destination:"Maldives", Dates:"7 nights, Nov", Party:"2 travellers", Budget:"$14,000", Occasion:"Anniversary"},
+       lines:[["Agent","A seven-night Maldives package: overwater villa or beach villa?"],
+              ["Jordan","Overwater if we can stretch to it."],
+              ["Agent","I'll have Sofia send you two options today. Email or phone?"],
+              ["Jordan","Email works best."]]},
+      {who:"Unknown Caller", when:"Yesterday · 8:11 PM", dur:"0:44", outcome:"voicemail", label:"Voicemail",
+       lines:[["Agent","You've reached Blue Harbor Travel after hours. Leave a message and we'll call you back."],
+              ["Caller","Hi, just checking on my Lisbon itinerary, call me tomorrow."]]},
+      {who:"The Okafor Family", when:"Yesterday · 2:26 PM", dur:"6:51", outcome:"qualified", label:"Inquiry captured",
+       brief:{Destination:"Costa Rica / Portugal", Dates:"Spring break", Party:"4 travellers", Budget:"Up to $12,000", Occasion:"Family"},
+       lines:[["Agent","Four travellers over spring break. Any destinations on the shortlist?"],
+              ["Okafor","Costa Rica or Portugal, kid-friendly either way."],
+              ["Agent","Both are excellent with children. What's the budget range for the four of you?"],
+              ["Okafor","Up to $12,000 all in."]]},
+      {who:"Nina Petrov", when:"Mon · 3:40 PM", dur:"4:29", outcome:"booked", label:"Quote requested",
+       brief:{Destination:"Japan", Dates:"April", Party:"2 travellers", Budget:"$9,500", Occasion:"Cherry blossom"},
+       lines:[["Agent","Cherry-blossom season books out fast. Are your dates flexible within April?"],
+              ["Nina","Yes, flexible within April."],
+              ["Agent","Great, I'll ask Marco to prepare a quote today."]]},
+      {who:"Sam Reid", when:"Mon · 10:12 AM", dur:"1:03", outcome:"lost", label:"Not a fit",
+       lines:[["Agent","Are you looking to plan a trip with us today?"],
+              ["Sam","No, I was trying to reach the airline directly."],
+              ["Agent","No problem, I'll give you their reservations line."]]}
+    ],
+    leads:[
+      {id:"l1", stage:0, name:"Amelie Fournier",   detail:"Greece · Late Sept · 2 pax · ~$6,000", tags:["Inbound call","Honeymoon"]},
+      {id:"l2", stage:0, name:"The Okafor Family", detail:"Costa Rica or Portugal · Spring break · 4 pax", tags:["Inbound call","Family"]},
+      {id:"l3", stage:1, name:"Jordan Blake",      detail:"Maldives · 7 nights · Overwater villa", tags:["Sofia"]},
+      {id:"l4", stage:1, name:"Nina Petrov",       detail:"Japan · April · 2 pax · $9,500", tags:["Marco"]},
+      {id:"l5", stage:2, name:"Liam Chen",         detail:"Iceland · Aug 22–29 · Deposit paid", tags:["Sofia"]},
+      {id:"l6", stage:3, name:"Rosa Delgado",      detail:"Amalfi Coast · Returns Aug 9", tags:["Check-in scheduled"]}
+    ],
+    billing:{
+      title:"Growth plan", desc:"2,500 minutes included · $0.14 per minute overage",
+      pct:74, used:"1,840 min used", left:"660 min remaining",
+      next:"$499.00", nextDate:"Bills automatically on Aug 18, 2026", base:"$499.00", over:"$0.00",
+      invoices:[
+        {id:"INV-1042", period:"Jul 2026", mins:"2,310", amt:"$499.00", status:"Paid"},
+        {id:"INV-1027", period:"Jun 2026", mins:"2,680", amt:"$525.20", status:"Paid"},
+        {id:"INV-1011", period:"May 2026", mins:"1,995", amt:"$499.00", status:"Paid"}
+      ]
+    },
+    config:[
+      ["Agent name","Blue Harbor Trip Line"],
+      ["Phone number","+1 (305) 555-0122"],
+      ["Voice","Bright and friendly, female"],
+      ["Languages","English, Spanish, French"],
+      ["Business hours","Mon–Sun, 7:00 AM – 9:00 PM ET"],
+      ["After-hours behaviour","Captures trip details, emails summary to consultants"],
+      ["Escalation number","+1 (305) 555-0177"],
+      ["CRM sync","HubSpot, connected"],
+      ["Qualification questions","Destination · Travel dates · Party size · Budget · Occasion"],
+      ["Recording retention","12 months"]
+    ]
+  },
+
+  wanderlux:{
+    name:"Wanderlux Journeys", initials:"WJ", plan:"SCALE", line:"Concierge Line",
+    user:{name:"Sofia Marchetti", initials:"SM"},
+    kpis:[
+      {label:"Calls handled",   value:241,    delta:"+8%",   dir:"up",   note:"vs last week", spark:[180,192,185,204,210,199,218,225,236,241]},
+      {label:"Trip inquiries",  value:64,     delta:"+12%",  dir:"up",   note:"vs last week", spark:[38,42,41,47,50,49,54,57,61,64]},
+      {label:"Avg handle time", value:"5:47", delta:"-0:15", dir:"up",   note:"vs last week", spark:[6.4,6.3,6.2,6.3,6.1,6.0,6.1,5.9,5.8,5.8]},
+      {label:"Minutes used",    value:"4,380", frac:"/ 6,000", delta:"73% of plan", dir:"flat", note:"resets Aug 25", spark:[520,1050,1580,2100,2500,2980,3400,3800,4100,4380]}
+    ],
+    volume:[{d:"Mon",v:31},{d:"Tue",v:36},{d:"Wed",v:33},{d:"Thu",v:38},{d:"Fri",v:41},{d:"Sat",v:34},{d:"Sun",v:28}],
+    outcomes:[
+      {label:"Trip inquiry captured", n:64, key:"qualified", color:"var(--positive)"},
+      {label:"Quote requested",       n:41, key:"booked",    color:"var(--accent)"},
+      {label:"Voicemail / no answer", n:57, key:"voicemail", color:"var(--muted)"},
+      {label:"Not a fit",             n:79, key:"lost",      color:"var(--negative)"}
+    ],
+    calls:[
+      {who:"Celeste Marchand", when:"Today · 5:02 PM", dur:"7:14", outcome:"qualified", label:"Inquiry captured",
+       brief:{Destination:"Botswana safari", Dates:"June 2027", Party:"2 travellers", Budget:"~$40,000", Occasion:"25th anniversary"},
+       lines:[["Agent","Welcome to Wanderlux Journeys. How can I help you travel beautifully?"],
+              ["Celeste","We'd like a private safari for our 25th anniversary. Botswana, maybe Namibia."],
+              ["Agent","A wonderful occasion. What time of year, and how many travelling?"],
+              ["Celeste","June next year, just the two of us. Budget around $40,000."],
+              ["Agent","Noted. Elena designs our southern Africa itineraries, and she'll call you within the day."]]},
+      {who:"Hiro Tanaka", when:"Today · 11:26 AM", dur:"4:55", outcome:"booked", label:"Quote requested",
+       brief:{Destination:"Antarctica", Dates:"December", Party:"2 travellers", Budget:"$28,000", Occasion:"Bucket list"},
+       lines:[["Agent","An Antarctica expedition cruise in December. Cabin preference?"],
+              ["Hiro","Balcony if available. Please include the fly-cruise option too."],
+              ["Agent","I'll have Elena prepare both."]]},
+      {who:"Unknown Caller", when:"Today · 7:48 AM", dur:"0:52", outcome:"voicemail", label:"Voicemail",
+       lines:[["Agent","You've reached Wanderlux Journeys before opening hours. Please leave a message."],
+              ["Caller","Morning, following up on the Patagonia itinerary, ring me back."]]},
+      {who:"The Whitmore Party", when:"Yesterday · 4:15 PM", dur:"8:03", outcome:"qualified", label:"Inquiry captured",
+       brief:{Destination:"Tuscany", Dates:"July, 2 weeks", Party:"9 travellers", Budget:"$60,000", Occasion:"Multigenerational"},
+       lines:[["Agent","A multigenerational villa trip for nine. Tuscany or Provence?"],
+              ["Whitmore","Tuscany. Two weeks in July, with a chef if possible."],
+              ["Agent","Very doable. I'll capture that and Theo will send villa options."]]},
+      {who:"Priya Raman", when:"Yesterday · 1:33 PM", dur:"3:21", outcome:"booked", label:"Quote requested",
+       brief:{Destination:"Bhutan", Dates:"Festival season", Party:"2 travellers", Budget:"$18,000", Occasion:"Milestone birthday"},
+       lines:[["Agent","Bhutan in festival season. Elena will send the full itinerary tonight."],
+              ["Priya","Perfect, thank you."]]},
+      {who:"Gene Ford", when:"Mon · 9:20 AM", dur:"1:18", outcome:"lost", label:"Not a fit",
+       lines:[["Agent","What kind of journey can we design for you?"],
+              ["Gene","Oh, I think I have the wrong number, sorry."]]}
+    ],
+    leads:[
+      {id:"w1", stage:0, name:"Celeste Marchand",   detail:"Botswana safari · June · 2 pax · ~$40,000", tags:["Anniversary","VIP"]},
+      {id:"w2", stage:0, name:"The Whitmore Party", detail:"Tuscany villa · July · 9 pax · Chef", tags:["Multigen"]},
+      {id:"w3", stage:1, name:"Hiro Tanaka",        detail:"Antarctica cruise · Dec · Fly-cruise option", tags:["Elena"]},
+      {id:"w4", stage:1, name:"Priya Raman",        detail:"Bhutan · Festival season · 2 pax", tags:["Elena"]},
+      {id:"w5", stage:1, name:"Marcus Webb",        detail:"Galápagos yacht · Nov · 4 pax", tags:["Theo"]},
+      {id:"w6", stage:2, name:"The Ashfords",       detail:"Kyoto & Tokyo · Oct 3–17 · Paid in full", tags:["Theo"]},
+      {id:"w7", stage:2, name:"Dana & Iris Kohl",   detail:"Seychelles · Sept 12–22 · Deposit paid", tags:["Honeymoon"]},
+      {id:"w8", stage:3, name:"The Larsen Family",  detail:"Norwegian fjords · Returns Aug 11", tags:["Check-in scheduled"]}
+    ],
+    billing:{
+      title:"Scale plan", desc:"6,000 minutes included · $0.11 per minute overage",
+      pct:73, used:"4,380 min used", left:"1,620 min remaining",
+      next:"$1,240.00", nextDate:"Bills automatically on Aug 25, 2026", base:"$1,240.00", over:"$0.00",
+      invoices:[
+        {id:"INV-1103", period:"Jul 2026", mins:"5,820", amt:"$1,240.00", status:"Paid"},
+        {id:"INV-1088", period:"Jun 2026", mins:"6,240", amt:"$1,266.40", status:"Paid"},
+        {id:"INV-1071", period:"May 2026", mins:"5,410", amt:"$1,240.00", status:"Paid"}
+      ]
+    },
+    config:[
+      ["Agent name","Wanderlux Concierge Line"],
+      ["Phone number","+1 (212) 555-0180"],
+      ["Voice","Calm and refined, female"],
+      ["Languages","English, French, Japanese, German"],
+      ["Business hours","Mon–Sun, 24 hours"],
+      ["After-hours behaviour","Full service: captures inquiry and books consult calls"],
+      ["Escalation number","+1 (212) 555-0195"],
+      ["CRM sync","Salesforce, connected"],
+      ["Qualification questions","Destination · Dates · Party size · Budget · Occasion · Past trips"],
+      ["Recording retention","24 months"]
+    ]
+  }
+};
+
+const STAGES = [
+  {title:"New inquiry", color:"var(--warning)"},
+  {title:"Quoted",      color:"var(--accent)"},
+  {title:"Booked",      color:"var(--positive)"},
+  {title:"Traveling",   color:"var(--muted)"}
+];
+
+let current = 'blueharbor';
+let filter  = 'all';
+let tab     = 'overview';
+
+/* ---------- small helpers ---------- */
+const $  = (s, r) => (r || document).querySelector(s);
+const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function bars(n, seed){
+  let out = '';
+  for(let i=0;i<n;i++){ out += '<span style="height:' + (26 + ((i*37 + seed*13) % 72)) + '%"></span>'; }
+  return out;
+}
+function spark(data, id){
+  const W=100, H=30, P=3;
+  const min = Math.min.apply(null, data), max = Math.max.apply(null, data);
+  const span = (max - min) || 1;
+  const pts = data.map((v,i)=>{
+    const x = P + (i * (W - P*2)) / (data.length - 1);
+    const y = H - P - ((v - min) / span) * (H - P*2);
+    return [x, y];
+  });
+  const line = pts.map((p,i)=> (i?'L':'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' ');
+  const area = line + ' L' + (W-P) + ' ' + H + ' L' + P + ' ' + H + ' Z';
+  const last = pts[pts.length-1];
+  return '<svg class="spark" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" aria-hidden="true">' +
+    '<defs><linearGradient id="' + id + '" x1="0" y1="0" x2="0" y2="1">' +
+    '<stop offset="0%" stop-color="var(--accent)" stop-opacity=".28"/>' +
+    '<stop offset="100%" stop-color="var(--accent)" stop-opacity="0"/></linearGradient></defs>' +
+    '<path d="' + area + '" fill="url(#' + id + ')"/>' +
+    '<path d="' + line + '" fill="none" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>' +
+    '<circle cx="' + last[0].toFixed(1) + '" cy="' + last[1].toFixed(1) + '" r="1.9" fill="var(--accent)"/></svg>';
+}
+function countUp(el, target){
+  const clean = String(target).replace(/,/g, '');
+  if(isNaN(clean)) { el.textContent = target; return; }
+  const end = Number(clean), t0 = performance.now(), dur = 700;
+  function step(t){
+    const k = Math.min(1, (t - t0) / dur);
+    const eased = 1 - Math.pow(1 - k, 3);
+    el.textContent = Math.round(end * eased).toLocaleString();
+    if(k < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+/* ---------- render: shell ---------- */
+function render(id){
+  current = id;
+  const t = TENANTS[id];
+
+  $('#swLogo').textContent = t.initials;
+  $('#swName').textContent = t.name;
+  $('#swPlan').textContent = t.plan;
+  $('#tbName').textContent = t.name;
+  $('#tbStatus').textContent = 'Agent live';
+  $('#userName').textContent = t.user.name;
+  $('#userInitials').textContent = t.user.initials;
+  $('#navCallCount').textContent = t.calls.length;
+  $('#navLeadCount').textContent = t.leads.length;
+
+  renderSwitcher();
+  renderKpis(t);
+  renderVolume(t);
+  renderOutcomes(t);
+  renderCalls(t);
+  renderKanban(t);
+  renderBilling(t);
+  renderAgent(t);
+}
+
+function renderSwitcher(){
+  $('#swMenu').innerHTML = Object.keys(TENANTS).map(k => {
+    const t = TENANTS[k];
+    return `<button class="switcher-item ${k===current?'on':''}" onclick="switchTenant('${k}')">
+      <span class="t-logo" style="width:28px;height:28px;border-radius:9px;font-size:11px">${t.initials}</span>
+      <span><span class="name">${esc(t.name)}</span><span class="plan">${t.plan}</span></span>
+      <svg class="tick" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg>
+    </button>`;
+  }).join('');
+}
+function toggleSwitcher(e){ e.stopPropagation(); $('#swMenu').classList.toggle('open'); }
+function switchTenant(k){
+  $('#swMenu').classList.remove('open');
+  render(k);
+  toast('Switched to ' + TENANTS[k].name);
+}
+document.addEventListener('click', () => $('#swMenu') && $('#swMenu').classList.remove('open'));
+
+/* ---------- render: KPIs ---------- */
+function renderKpis(t){
+  $('#kpiRow').innerHTML = t.kpis.map((k,i) => {
+    const arrow = k.dir === 'up'
+      ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>'
+      : k.dir === 'down'
+      ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>' : '';
+    return `<div class="card kpi">
+      <span class="lab">${esc(k.label)}</span>
+      <div class="kpi-val"><b class="num" data-count="${esc(k.value)}">${esc(k.value)}</b>${k.frac?`<span class="frac num">${esc(k.frac)}</span>`:''}</div>
+      <div class="kpi-foot">
+        <span class="meta"><span class="delta ${k.dir}">${arrow}${esc(k.delta)}</span><span class="kpi-note">${esc(k.note)}</span></span>
+        ${spark(k.spark, 'sp' + i + '-' + current)}
+      </div>
+    </div>`;
+  }).join('');
+  $$('#kpiRow .kpi-val b').forEach(el => countUp(el, el.dataset.count));
+}
+
+/* ---------- render: volume ---------- */
+function renderVolume(t){
+  const max = Math.max.apply(null, t.volume.map(d => d.v));
+  const total = t.volume.reduce((a,b) => a + b.v, 0);
+  $('#volSub').textContent = total + ' calls · peak ' + t.volume.find(d => d.v === max).d;
+  $('#bars').innerHTML = t.volume.map(d => `
+    <div class="bar-col ${d.v===max?'peak':''}">
+      <span class="bar-v num">${d.v}</span>
+      <div class="bar" style="height:${Math.max(6, (d.v/max)*100)}%"></div>
+      <span class="bar-d">${d.d}</span>
+    </div>`).join('');
+}
+
+/* ---------- render: outcomes ---------- */
+function renderOutcomes(t){
+  const total = t.outcomes.reduce((a,b) => a + b.n, 0);
+  $('#outTotal').textContent = total + ' calls';
+  $('#outSeg').innerHTML = t.outcomes.map(o =>
+    `<i style="width:${(o.n/total*100).toFixed(1)}%;background:${o.color}"></i>`).join('');
+  $('#outList').innerHTML = t.outcomes.map(o => `
+    <div class="out-row">
+      <span class="out-dot" style="background:${o.color}"></span>
+      <span class="n">${esc(o.label)}</span>
+      <span class="v num">${o.n}</span>
+      <span class="p num">${Math.round(o.n/total*100)}%</span>
+    </div>`).join('');
+}
+
+/* ---------- render: calls ---------- */
+const FILTERS = [
+  {k:'all',       t:'All'},
+  {k:'qualified', t:'Inquiries'},
+  {k:'booked',    t:'Quotes'},
+  {k:'voicemail', t:'Voicemail'},
+  {k:'lost',      t:'Not a fit'}
+];
+function badgeFor(c){
+  const cls = c.outcome === 'qualified' ? 'ok' : c.outcome === 'booked' ? 'acc' : c.outcome === 'lost' ? 'bad' : '';
+  return `<span class="badge ${cls}"><span class="dot"></span>${esc(c.label)}</span>`;
+}
+function callRow(c, i){
+  const brief = c.brief ? `
+    <div class="brief">
+      <span class="lab">Trip brief</span>
+      <div class="brief-grid">
+        ${Object.keys(c.brief).map(k => `<div><span>${esc(k)}</span><b>${esc(c.brief[k])}</b></div>`).join('')}
+      </div>
+      <a class="brief-link" href="#" onclick="go('leads');return false">Open in trip pipeline
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+    </div>` : '';
+  return `<div class="call ${c.outcome}" data-outcome="${c.outcome}">
+    <button class="call-head" onclick="toggleCall(this)">
+      <span class="wave">${bars(11, i)}</span>
+      <span class="call-who"><b>${esc(c.who)}</b><span>${esc(c.when)}</span></span>
+      ${badgeFor(c)}
+      <span class="call-dur">${esc(c.dur)}</span>
+      <svg class="call-caret" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
+    <div class="call-body">
+      <div class="player">
+        <button class="play-btn" onclick="playToggle(this)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5l12 7-12 7z"/></svg></button>
+        <span class="t">0:00</span>
+        <span class="track" onclick="seek(event,this)"><i></i></span>
+        <span class="t">${esc(c.dur)}</span>
+      </div>
+      ${c.lines.map(l => `<div class="turn ${l[0]==='Agent'?'agent':''}">
+        <span class="sp">${esc(l[0])}</span><p>${esc(l[1])}</p></div>`).join('')}
+      ${brief}
+    </div>
+  </div>`;
+}
+function renderCalls(t){
+  $('#recentCalls').innerHTML = t.calls.slice(0,4).map(callRow).join('');
+  $('#callFilters').innerHTML = FILTERS.map(f => {
+    const n = f.k === 'all' ? t.calls.length : t.calls.filter(c => c.outcome === f.k).length;
+    return `<button class="f-chip ${filter===f.k?'on':''}" onclick="setFilter('${f.k}')">${f.t}<span class="c">${n}</span></button>`;
+  }).join('');
+  const list = filter === 'all' ? t.calls : t.calls.filter(c => c.outcome === filter);
+  $('#allCalls').innerHTML = list.length ? list.map(callRow).join('') : `
+    <div class="empty">
+      <span class="ring"><span class="wave-load" style="height:16px"><span></span><span></span><span></span><span></span><span></span></span></span>
+      <b>Nothing on this line yet</b><p>No calls matched this filter in the last 7 days.</p>
+    </div>`;
+}
+function setFilter(k){ filter = k; renderCalls(TENANTS[current]); }
+function toggleCall(btn){
+  const row = btn.parentElement;
+  const open = row.classList.contains('open');
+  row.parentElement.querySelectorAll('.call.open').forEach(r => r.classList.remove('open'));
+  if(!open) row.classList.add('open');
+}
+function playToggle(btn){
+  const player = btn.parentElement;
+  const fill = $('.track i', player), elapsed = $('.t', player);
+  if(btn.dataset.timer){
+    clearInterval(Number(btn.dataset.timer)); btn.dataset.timer = '';
+    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5l12 7-12 7z"/></svg>';
+    return;
+  }
+  btn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>';
+  let p = parseFloat(fill.style.width) || 0;
+  const total = 100, tick = setInterval(() => {
+    p += 1.4;
+    if(p >= total){
+      clearInterval(tick); btn.dataset.timer = ''; p = 0; fill.style.width = '0%'; elapsed.textContent = '0:00';
+      btn.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5l12 7-12 7z"/></svg>';
+      return;
+    }
+    fill.style.width = p + '%';
+    const secs = Math.round((p/100) * 318);
+    elapsed.textContent = Math.floor(secs/60) + ':' + String(secs%60).padStart(2,'0');
+  }, 90);
+  btn.dataset.timer = String(tick);
+}
+function seek(e, track){
+  const r = track.getBoundingClientRect();
+  $('i', track).style.width = Math.max(0, Math.min(100, ((e.clientX - r.left)/r.width)*100)) + '%';
+}
+
+/* ---------- render: kanban ---------- */
+function renderKanban(t){
+  $('#kanban').innerHTML = STAGES.map((s, si) => {
+    const cards = t.leads.filter(l => l.stage === si);
+    return `<div class="col" data-stage="${si}" ondragover="dragOver(event)" ondragleave="dragLeave(event)" ondrop="drop(event)">
+      <div class="col-head"><span class="dot" style="background:${s.color}"></span><b>${s.title}</b><span class="c">${cards.length}</span></div>
+      ${cards.length ? cards.map(l => `
+        <div class="lead" draggable="true" data-id="${l.id}" ondragstart="dragStart(event)" ondragend="dragEnd(event)">
+          <b>${esc(l.name)}</b>
+          <p>${esc(l.detail)}</p>
+          <div class="lead-tags">${l.tags.map(x => `<span class="tag">${esc(x)}</span>`).join('')}</div>
+        </div>`).join('')
+      : '<div class="col-empty"><span class="wave-load"><span></span><span></span><span></span><span></span><span></span></span>Drop a trip here</div>'}
+    </div>`;
+  }).join('');
+}
+let dragId = null;
+function dragStart(e){ dragId = e.currentTarget.dataset.id; e.currentTarget.classList.add('dragging'); e.dataTransfer.effectAllowed = 'move'; }
+function dragEnd(e){ e.currentTarget.classList.remove('dragging'); }
+function dragOver(e){ e.preventDefault(); e.currentTarget.classList.add('drag'); }
+function dragLeave(e){ e.currentTarget.classList.remove('drag'); }
+function drop(e){
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag');
+  const stage = Number(e.currentTarget.dataset.stage);
+  const lead = TENANTS[current].leads.find(l => l.id === dragId);
+  if(!lead || lead.stage === stage) return;
+  lead.stage = stage;
+  renderKanban(TENANTS[current]);
+  toast(lead.name + ' moved to ' + STAGES[stage].title);
+}
+
+/* ---------- render: billing + agent ---------- */
+function renderBilling(t){
+  const b = t.billing;
+  $('#billTitle').textContent = b.title;
+  $('#billBadge').textContent = t.plan;
+  $('#billDesc').textContent = b.desc;
+  $('#usageUsed').textContent = b.used;
+  $('#usageLeft').textContent = b.left;
+  $('#nextAmt').textContent = b.next;
+  $('#nextDate').textContent = b.nextDate;
+  $('#baseAmt').textContent = b.base;
+  $('#overAmt').textContent = b.over;
+  setTimeout(() => { $('#usageFill').style.width = b.pct + '%'; }, 120);
+  $('#invoiceRows').innerHTML = b.invoices.map(i => `<tr>
+    <td class="id">${i.id}</td><td>${i.period}</td><td class="mono">${i.mins}</td>
+    <td><span class="badge ok"><span class="dot"></span>${i.status}</span></td>
+    <td class="amt">${i.amt}</td></tr>`).join('');
+}
+function renderAgent(t){
+  $('#agentKv').innerHTML = t.config.map(([k,v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('');
+}
+
+/* ---------- tabs ---------- */
+const TAB_TITLES = {overview:'Overview', calls:'Calls', leads:'Trip Pipeline', billing:'Billing & Usage', agent:'Agent Setup'};
+function go(name){
+  tab = name;
+  $$('.panel').forEach(p => p.classList.remove('on'));
+  $('#p-' + name).classList.add('on');
+  $$('.nav-item').forEach(b => b.classList.toggle('on', b.dataset.tab === name));
+  $$('#mobileTabs button').forEach((b,i) => b.classList.toggle('on', ['overview','calls','leads','billing','agent'][i] === name));
+  $('#tbTab').textContent = TAB_TITLES[name];
+  if(name === 'overview') renderKpis(TENANTS[current]);
+  if(name === 'billing'){ $('#usageFill').style.width = '0%'; setTimeout(() => { $('#usageFill').style.width = TENANTS[current].billing.pct + '%'; }, 60); }
+  window.scrollTo(0, 0);
+}
+
+/* ---------- modal / toast / palette ---------- */
+function openModal(){ $('#scrim').classList.add('open'); setTimeout(() => $('#crText').focus(), 60); }
+function closeModal(){ $('#scrim').classList.remove('open'); }
+function sendChange(){
+  const v = $('#crText').value.trim();
+  closeModal();
+  $('#crText').value = '';
+  toast(v ? 'Change request sent. We reply within one business day' : 'Nothing to send');
+}
+function toast(msg){
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg>' + esc(msg);
+  $('#toasts').appendChild(el);
+  setTimeout(() => { el.style.transition = 'opacity .3s, transform .3s'; el.style.opacity = '0'; el.style.transform = 'translateY(6px)'; }, 2600);
+  setTimeout(() => el.remove(), 3000);
+}
+const COMMANDS = [
+  {t:'Go to Overview',        s:'G O', run:() => go('overview')},
+  {t:'Go to Calls',           s:'G C', run:() => go('calls')},
+  {t:'Go to Trip Pipeline',   s:'G P', run:() => go('leads')},
+  {t:'Go to Billing & Usage', s:'G B', run:() => go('billing')},
+  {t:'Go to Agent Setup',     s:'G A', run:() => go('agent')},
+  {t:'Switch to Blue Harbor Travel', s:'', run:() => switchTenant('blueharbor')},
+  {t:'Switch to Wanderlux Journeys', s:'', run:() => switchTenant('wanderlux')},
+  {t:'Request an agent change',      s:'', run:() => { go('agent'); openModal(); }},
+  {t:'Toggle theme',          s:'⌘ J', run:toggleTheme},
+  {t:'Sign out',              s:'',    run:logout}
+];
+function openPalette(){
+  $('#paletteScrim').classList.add('open');
+  $('#paletteInput').value = '';
+  paintPalette('');
+  setTimeout(() => $('#paletteInput').focus(), 50);
+}
+function closePalette(){ $('#paletteScrim').classList.remove('open'); }
+function paintPalette(q){
+  const hits = COMMANDS.filter(c => c.t.toLowerCase().includes(q.toLowerCase()));
+  $('#paletteList').innerHTML = hits.length ? hits.map((c,i) => `
+    <button class="p-item ${i===0?'sel':''}" onclick="runCommand('${esc(c.t)}')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      <b>${esc(c.t)}</b><span>${c.s}</span></button>`).join('')
+    : '<div style="padding:26px;text-align:center;color:var(--muted);font-size:13px">No matches</div>';
+}
+function runCommand(title){
+  const c = COMMANDS.find(x => x.t === title);
+  closePalette();
+  if(c) c.run();
+}
+$('#paletteInput').addEventListener('input', e => paintPalette(e.target.value));
+$('#paletteInput').addEventListener('keydown', e => {
+  if(e.key === 'Enter'){
+    const first = $('#paletteList .p-item');
+    if(first) first.click();
+  }
+});
+document.addEventListener('keydown', e => {
+  const inApp = $('#view-app').classList.contains('active');
+  if((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k'){ e.preventDefault(); if(inApp) openPalette(); }
+  if((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'j'){ e.preventDefault(); toggleTheme(); }
+  if(e.key === 'Escape'){ closePalette(); closeModal(); }
+});
+
+/* ---------- marketing hero: simulated live call ---------- */
+const SCRIPT = [
+  ['agent','Voxline','Thanks for calling Blue Harbor Travel. Where are you dreaming of going?'],
+  ['caller','Caller','We were thinking Greece, sometime in late September.'],
+  ['agent','Voxline','Lovely. How many of you will be travelling?'],
+  ['caller','Caller','Just the two of us.'],
+  ['agent','Voxline','And what budget should we plan around?'],
+  ['caller','Caller','Around six thousand, flights included.'],
+  ['agent','Voxline','Perfect. Is this a special occasion?'],
+  ['caller','Caller','It is. Our honeymoon.'],
+  ['agent','Voxline','Congratulations. Our Mediterranean specialist will call you tomorrow morning.']
+];
+const BRIEF = [['Destination','Greece'],['Dates','Late September'],['Party','2 travellers'],['Budget','~$6,000'],['Occasion','Honeymoon']];
+let demoTimers = [];
+function buildWave(){
+  const w = $('#demoWave');
+  w.innerHTML = Array.from({length:56}, (_,i) =>
+    `<span style="height:${18 + ((i*29) % 68)}%"></span>`).join('');
+}
+function runDemo(){
+  demoTimers.forEach(clearTimeout); demoTimers = [];
+  const body = $('#demoBody'), chips = $('#demoChips'), stamp = $('#demoStamp');
+  body.innerHTML = ''; chips.innerHTML = '';
+  stamp.textContent = 'Call in progress…';
+  const waveSpans = $$('#demoWave span');
+  let wi = 0;
+  const waveTick = setInterval(() => {
+    waveSpans.forEach((s, i) => s.classList.toggle('on', i <= wi % waveSpans.length));
+    wi += 2;
+  }, 90);
+  demoTimers.push(setTimeout(() => clearInterval(waveTick), SCRIPT.length * 1100 + 800));
+
+  SCRIPT.forEach((line, i) => {
+    demoTimers.push(setTimeout(() => {
+      const b = document.createElement('div');
+      b.className = 'bubble ' + line[0];
+      b.innerHTML = `<span class="who">${line[1]}</span>${esc(line[2])}`;
+      body.appendChild(b);
+      while(body.children.length > 4) body.removeChild(body.firstChild);
+    }, i * 1100));
+  });
+  BRIEF.forEach((c, i) => {
+    demoTimers.push(setTimeout(() => {
+      const el = document.createElement('span');
+      el.className = 'chip';
+      el.innerHTML = `${c[0]} <b>${esc(c[1])}</b>`;
+      chips.appendChild(el);
+    }, 1800 + i * 1400));
+  });
+  demoTimers.push(setTimeout(() => {
+    stamp.textContent = 'Call 04:12 · trip brief filed · consultant notified';
+    waveSpans.forEach(s => s.classList.remove('on'));
+  }, SCRIPT.length * 1100 + 600));
+}
+
+/* ---------- hero spotlight follows the pointer ---------- */
+(function(){
+  const hero = document.querySelector('.hero'), spot = document.getElementById('spot');
+  if(!hero || !spot) return;
+  if(window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  let raf = null;
+  hero.addEventListener('pointermove', e => {
+    if(raf) return;
+    raf = requestAnimationFrame(() => {
+      const r = hero.getBoundingClientRect();
+      spot.style.setProperty('--mx', ((e.clientX - r.left) / r.width * 100).toFixed(1) + '%');
+      spot.style.setProperty('--my', ((e.clientY - r.top) / r.height * 100).toFixed(1) + '%');
+      raf = null;
+    });
+  });
+  hero.addEventListener('pointerleave', () => { spot.style.opacity = '.6'; });
+  hero.addEventListener('pointerenter', () => { spot.style.opacity = '1'; });
+})();
+
+/* ---------- boot ---------- */
+buildWave();
+runDemo();
+render(current);
+</script>
+</body>
+</html>

@@ -1,26 +1,184 @@
 @import "tailwindcss";
 
+/* ============================================================
+   Voxline "Deep Ink" design tokens.
+   Source of truth: docs/Voxline-UI-Prototype.html — copied verbatim.
+   Dark-first: :root is the dark theme, [data-theme="light"] overrides.
+   ============================================================ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* --- surfaces --- */
+  --bg: #06090c;
+  --bg-2: #080c11;
+  --surface: #0c1116;
+  --surface-2: #111820;
+  --surface-3: #18212b;
+  --overlay: rgba(4, 7, 10, 0.72);
+
+  /* --- lines --- */
+  --border: rgba(255, 255, 255, 0.07);
+  --border-2: rgba(255, 255, 255, 0.13);
+  --border-3: rgba(255, 255, 255, 0.22);
+
+  /* --- ink --- */
+  --text: #edf2f5;
+  --text-2: #aebcc6;
+  --muted: #77848f;
+  --faint: #4b5761;
+
+  /* --- brand --- */
+  --accent: #14e0c0;
+  --accent-2: #63e6ff;
+  --accent-ink: #03120f;
+  --accent-soft: rgba(20, 224, 192, 0.11);
+  --accent-line: rgba(20, 224, 192, 0.32);
+  --accent-text: #5fedd6;
+
+  /* --- semantic --- */
+  --positive: #3bd68b;
+  --positive-soft: rgba(59, 214, 139, 0.13);
+  --warning: #f5c451;
+  --warning-soft: rgba(245, 196, 81, 0.13);
+  --negative: #ff6e6e;
+  --negative-soft: rgba(255, 110, 110, 0.13);
+  --neutral-soft: rgba(160, 178, 190, 0.11);
+
+  /* --- elevation --- */
+  --sh-1: 0 1px 2px rgba(0, 0, 0, 0.45);
+  --sh-2: 0 10px 30px -8px rgba(0, 0, 0, 0.6), 0 1px 0 rgba(255, 255, 255, 0.03) inset;
+  --sh-3: 0 40px 80px -24px rgba(0, 0, 0, 0.75), 0 1px 0 rgba(255, 255, 255, 0.04) inset;
+  --glow: 0 0 0 1px var(--accent-line), 0 0 32px -6px rgba(20, 224, 192, 0.35);
+
+  /* --- geometry (8pt) --- */
+  --r-xs: 8px;
+  --r-sm: 11px;
+  --r-md: 14px;
+  --r-lg: 20px;
+  --r-xl: 28px;
+  --r-pill: 999px;
+
+  /* --- painted decoration --- */
+  --grad: linear-gradient(135deg, #14e0c0, #63e6ff);
+  --grad-soft: linear-gradient(135deg, rgba(20, 224, 192, 0.16), rgba(99, 230, 255, 0.1));
+  --grad-bar: linear-gradient(180deg, #5fedd6, #0e9e89);
+  --nav-bg: rgba(8, 12, 17, 0.68);
+  --bloom:
+    radial-gradient(760px 380px at 8% -10%, rgba(20, 224, 192, 0.14), transparent 62%),
+    radial-gradient(900px 460px at 92% -14%, rgba(99, 230, 255, 0.11), transparent 58%);
+  --grid-line: rgba(255, 255, 255, 0.045);
+  --scrub: rgba(255, 255, 255, 0.14);
+  /* material: glass fill, inner highlight, gradient hairline */
+  --glass: linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.012));
+  --hairline: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.02) 40%, transparent);
+  --inner-hl: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  --spot: rgba(20, 224, 192, 0.1);
+  --skeleton: linear-gradient(90deg, var(--surface-2), var(--surface-3), var(--surface-2));
 }
 
+[data-theme="light"] {
+  --bg: #f4f6f8;
+  --bg-2: #ffffff;
+  --surface: #ffffff;
+  --surface-2: #f1f4f6;
+  --surface-3: #e7ecef;
+  --overlay: rgba(12, 20, 26, 0.42);
+
+  --border: #e4e9ed;
+  --border-2: #d2dae0;
+  --border-3: #b9c4cc;
+
+  --text: #070d12;
+  --text-2: #3b4954;
+  --muted: #66737d;
+  --faint: #93a0a9;
+
+  --accent: #07836f;
+  --accent-2: #0c7490;
+  --accent-ink: #ffffff;
+  --accent-soft: rgba(7, 131, 111, 0.09);
+  --accent-line: rgba(7, 131, 111, 0.26);
+  --accent-text: #066a5a;
+
+  --positive: #0b7a50;
+  --positive-soft: #e9f8f1;
+  --warning: #9a6206;
+  --warning-soft: #fdf6e7;
+  --negative: #c0342e;
+  --negative-soft: #fdf0ef;
+  --neutral-soft: #edf1f3;
+
+  --sh-1: 0 1px 2px rgba(9, 20, 28, 0.05);
+  --sh-2: 0 10px 28px -12px rgba(9, 20, 28, 0.16), 0 1px 0 rgba(255, 255, 255, 0.7) inset;
+  --sh-3: 0 40px 80px -28px rgba(9, 20, 28, 0.22);
+  --glow: 0 0 0 1px var(--accent-line), 0 0 28px -10px rgba(7, 131, 111, 0.35);
+
+  --grad: linear-gradient(135deg, #07836f, #0c7490);
+  --grad-soft: linear-gradient(135deg, rgba(7, 131, 111, 0.1), rgba(12, 116, 144, 0.07));
+  --grad-bar: linear-gradient(180deg, #12a88f, #07836f);
+  --nav-bg: rgba(244, 246, 248, 0.72);
+  --bloom:
+    radial-gradient(760px 380px at 8% -10%, rgba(7, 131, 111, 0.1), transparent 62%),
+    radial-gradient(900px 460px at 92% -14%, rgba(12, 116, 144, 0.09), transparent 58%);
+  --grid-line: rgba(9, 20, 28, 0.06);
+  --scrub: rgba(9, 20, 28, 0.14);
+  --glass: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.35));
+  --hairline: linear-gradient(180deg, rgba(9, 20, 28, 0.1), rgba(9, 20, 28, 0.02) 40%, transparent);
+  --inner-hl: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  --spot: rgba(7, 131, 111, 0.07);
+  --skeleton: linear-gradient(90deg, var(--surface-2), #fafcfd, var(--surface-2));
+}
+
+/* Map tokens into Tailwind v4 theme: bg-surface, text-accent, rounded-md-token, etc. */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --color-bg: var(--bg);
+  --color-bg-2: var(--bg-2);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-overlay: var(--overlay);
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-border: var(--border);
+  --color-border-2: var(--border-2);
+  --color-border-3: var(--border-3);
+
+  --color-text: var(--text);
+  --color-text-2: var(--text-2);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+
+  --color-accent: var(--accent);
+  --color-accent-2: var(--accent-2);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-line: var(--accent-line);
+  --color-accent-text: var(--accent-text);
+
+  --color-positive: var(--positive);
+  --color-positive-soft: var(--positive-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-negative: var(--negative);
+  --color-negative-soft: var(--negative-soft);
+  --color-neutral-soft: var(--neutral-soft);
+
+  --radius-xs: var(--r-xs);
+  --radius-sm: var(--r-sm);
+  --radius-md: var(--r-md);
+  --radius-lg: var(--r-lg);
+  --radius-xl: var(--r-xl);
+  --radius-pill: var(--r-pill);
+
+  --shadow-1: var(--sh-1);
+  --shadow-2: var(--sh-2);
+  --shadow-3: var(--sh-3);
+  --shadow-glow: var(--glow);
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-instrument-serif), ui-serif, Georgia, serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
 }

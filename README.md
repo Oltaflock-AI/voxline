@@ -1,36 +1,39 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Voxline
 
-## Getting Started
+Multi-tenant SaaS portal for travel agencies built on AI voice agents (Retell AI runtime, ElevenLabs voices). Calls, transcripts, trip pipeline, analytics, usage and billing in one client portal.
 
-First, run the development server:
+A product of Oltaflock AI LLP.
+
+## Read this first
+
+1. [docs/Voxline-Spec.md](docs/Voxline-Spec.md) — product and technical spec v3.0. Wins on data, rules and security.
+2. [docs/Voxline-UI-Prototype.html](docs/Voxline-UI-Prototype.html) — design source of truth. Wins on look and interaction. Open it in a browser.
+3. [docs/Voxline-Build-Handbook.pdf](docs/Voxline-Build-Handbook.pdf) — illustrated build handbook.
+
+## Stack
+
+Next.js 15 (App Router, TypeScript strict) · Tailwind CSS v4 (Deep Ink tokens mapped in `src/app/globals.css`) · Supabase (Postgres + RLS, Auth, Storage) · Retell AI · Stripe Billing · Resend · Vercel · Sentry.
+
+## Setup
 
 ```bash
+npm install
+cp .env.example .env.local   # fill in values from Khush (shared privately, never committed)
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Ground rules
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- Every data read and write is scoped by tenant. No exceptions.
+- Service-role key (`src/lib/supabase/admin.ts`) is server-only: webhooks and admin console. Never in client code.
+- Webhook handlers are idempotent — upsert on `retell_call_id`, never insert blind.
+- No secrets in the repo, ever.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Structure
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+src/app/            App Router pages (marketing, portal, /admin, /api)
+src/lib/supabase/   client.ts (browser) · server.ts (SSR) · admin.ts (service role)
+src/app/globals.css Deep Ink design tokens (dark-first) mapped into Tailwind
+docs/               Spec, prototype, handbook
+```
