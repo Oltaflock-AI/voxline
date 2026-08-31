@@ -7,6 +7,7 @@ on:
 
 jobs:
   check:
+    name: Lint, types, build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -21,3 +22,50 @@ jobs:
         env:
           NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
           NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder
+
+  e2e:
+    # Spec §8: "RLS on every tenant table, with an automated cross-tenant
+    # access test running in CI. This is the single most important requirement
+    # in the project."
+    #
+    # Spec §9 lists it under "Never cut". So this job is not optional and must
+    # not be marked continue-on-error, however inconvenient it gets.
+    name: End-to-end + tenant isolation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      # Applies every migration and runs seed.sql, so CI tests the real schema
+      # and the real policies rather than a fixture that has drifted from them.
+      - name: Start Supabase
+        run: supabase start
+
+      - name: Export Supabase env
+        run: |
+          echo "NEXT_PUBLIC_SUPABASE_URL=$(supabase status -o env | grep '^API_URL' | cut -d= -f2- | tr -d '\"')" >> $GITHUB_ENV
+          echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$(supabase status -o env | grep '^ANON_KEY' | cut -d= -f2- | tr -d '\"')" >> $GITHUB_ENV
+          echo "SUPABASE_SERVICE_ROLE_KEY=$(supabase status -o env | grep '^SERVICE_ROLE_KEY' | cut -d= -f2- | tr -d '\"')" >> $GITHUB_ENV
+          echo "NEXT_PUBLIC_APP_URL=http://localhost:3000" >> $GITHUB_ENV
+          echo "RETELL_WEBHOOK_SECRET=ci-test-secret" >> $GITHUB_ENV
+
+      - name: Install browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Playwright
+        run: npx playwright test
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7

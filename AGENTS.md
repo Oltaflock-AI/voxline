@@ -39,7 +39,7 @@ npm run lint     # eslint
 
 - Vercel is the source of truth for credentials (project `oltaflock-ai/voxline`, all three environments). Never paste secrets into files that get committed or into chat.
 - Local setup: `vercel link` then `vercel env pull .env.local --yes`. Re-pull after any `vercel env add` or dashboard change (also refreshes the ~12h `VERCEL_OIDC_TOKEN`).
-- `vercel env pull` overwrites `.env.local` entirely — keep hand-added local vars in `.env.dev.local` instead. Note: this repo's `.gitignore` ignores all `.env*` except `.env.example`.
+- `vercel env pull` overwrites `.env.local` entirely — keep hand-added local vars in `.env.development.local` instead. It must be that exact name: Next looks up `.env.$(NODE_ENV).local` and `next dev` sets `NODE_ENV=development`, so a file called `.env.dev.local` is never read and the variable is simply absent with no warning. `.env.development.local` also takes precedence over `.env.local`, so it survives a pull. Both are covered by the `.env*` rule in `.gitignore` (only `.env.example` is committed).
 - New variables: add the key (empty) to `.env.example` with a comment, add real values via `vercel env add NAME <env>` per environment.
 - Names the code expects: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` — the first two carry the `NEXT_PUBLIC_` prefix, the service key must not.
 
