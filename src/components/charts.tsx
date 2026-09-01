@@ -7,13 +7,24 @@ import { useId } from "react";
  * this needs to reach the browser as JavaScript.
  */
 
-export function Sparkline({ data }: { data: number[] }) {
+export function Sparkline({
+  data,
+  title,
+}: {
+  data: number[];
+  title?: string;
+}) {
   const gradientId = useId();
   const W = 100,
     H = 30,
     P = 3;
 
-  if (data.length < 2) return <svg className="spark" viewBox={`0 0 ${W} ${H}`} />;
+  if (data.length < 2)
+    return (
+      <svg className="spark" viewBox={`0 0 ${W} ${H}`}>
+        {title && <title>{title}</title>}
+      </svg>
+    );
 
   const min = Math.min(...data);
   const max = Math.max(...data);
@@ -36,8 +47,13 @@ export function Sparkline({ data }: { data: number[] }) {
       className="spark"
       viewBox={`0 0 ${W} ${H}`}
       preserveAspectRatio="none"
-      aria-hidden="true"
+      /* A titled sparkline is no longer decorative: it carries the one line
+         that explains why a falling line can sit beside a rising percentage,
+         so it stays in the accessibility tree. */
+      aria-hidden={title ? undefined : "true"}
+      role={title ? "img" : undefined}
     >
+      {title && <title>{title}</title>}
       <defs>
         <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="var(--accent)" stopOpacity=".28" />
@@ -59,16 +75,32 @@ export function Sparkline({ data }: { data: number[] }) {
   );
 }
 
-/** Call volume. Spec §6.2: peak day highlighted, value labels above each bar. */
-export function BarChart({ data }: { data: { d: string; v: number }[] }) {
-  const max = Math.max(...data.map((d) => d.v), 0);
+/**
+ * Call volume. Spec §6.2: peak day highlighted, value labels above each bar.
+ *
+ * The last bar is today, which is only part of a day. Drawn hatched and
+ * labelled "so far" because a four-hour bar beside six full-day bars otherwise
+ * reads as volume falling off a cliff, and that misreading is worse than the
+ * small amount of ink the distinction costs. It is also excluded from the peak
+ * highlight: a partial day cannot honestly win a "busiest day" comparison.
+ */
+export function BarChart({
+  data,
+}: {
+  data: { d: string; v: number; partial?: boolean }[];
+}) {
+  const complete = data.filter((d) => !d.partial);
+  const max = Math.max(...(complete.length ? complete : data).map((d) => d.v), 0);
 
   return (
     <div className="bars">
       {data.map((d, i) => (
         <div
           key={`${d.d}-${i}`}
-          className={`bar-col${d.v === max && max > 0 ? " peak" : ""}`}
+          className={`bar-col${d.v === max && max > 0 && !d.partial ? " peak" : ""}${
+            d.partial ? " partial" : ""
+          }`}
+          title={d.partial ? `${d.d}: ${d.v} so far, the day is not over` : undefined}
         >
           <span className="bar-v num">{d.v}</span>
           {/* Spec §7.9: "every number that can be zero renders correctly at
@@ -78,7 +110,10 @@ export function BarChart({ data }: { data: { d: string; v: number }[] }) {
             className="bar"
             style={{ height: max > 0 ? `${Math.max(6, (d.v / max) * 100)}%` : "6%" }}
           />
-          <span className="bar-d">{d.d}</span>
+          <span className="bar-d">
+            {d.d}
+            {d.partial && <em>so far</em>}
+          </span>
         </div>
       ))}
     </div>

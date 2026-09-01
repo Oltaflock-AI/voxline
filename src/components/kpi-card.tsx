@@ -56,7 +56,7 @@ export function KpiCard({ kpi }: { kpi: Kpi }) {
           </span>
           <span className="kpi-note">{kpi.note}</span>
         </span>
-        <Sparkline data={kpi.spark} />
+        <Sparkline data={kpi.spark} title={kpi.sparkTitle} />
       </div>
       {kpi.breakdown && (
         <div className="kpi-breakdown">

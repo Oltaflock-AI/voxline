@@ -811,7 +811,19 @@ textarea.input{height:auto;padding:12px 14px;min-height:110px;resize:vertical;li
 .bar-col.peak .bar{background:var(--grad-bar);box-shadow:0 8px 22px -10px var(--accent)}
 .bar-col:hover .bar{transform:scaleY(1.02);filter:brightness(1.15)}
 .bar-v{font-family:var(--font-jetbrains-mono), ui-monospace, monospace;font-size:11px;font-weight:500;color:var(--text-2)}
-.bar-d{font-size:11px;color:var(--muted)}
+.bar-d{font-size:11px;color:var(--muted);display:flex;flex-direction:column;align-items:center;line-height:1.25}
+/* Today, still filling. Hatched rather than a different colour, because every
+   colour on this chart already means something (accent = peak) and a seventh
+   solid bar in a new colour would read as a new category. A hatch reads as
+   "not finished" without joining the palette. */
+.bar-col.partial .bar{
+  background:repeating-linear-gradient(
+    -45deg, var(--border-2) 0 4px, transparent 4px 8px
+  ),var(--surface-2);
+  border:1px dashed var(--border);
+}
+.bar-col.partial .bar-v,.bar-col.partial .bar-d{color:var(--muted)}
+.bar-col.partial .bar-d em{font-style:normal;font-size:9px;letter-spacing:.04em;opacity:.8}
 .bar-col.peak .bar-d{color:var(--accent-text);font-weight:600}
 
 .seg{display:flex;height:8px;border-radius:99px;overflow:hidden;gap:2px;margin-bottom:18px}

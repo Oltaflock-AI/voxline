@@ -20,6 +20,8 @@ export type Kpi = {
   neutralWhy?: string;
   note: string;
   spark: number[];
+  /** What the sparkline actually plots, as its tooltip. */
+  sparkTitle?: string;
   /**
    * ONE supporting figure, as a number and a quiet label.
    *
@@ -37,7 +39,7 @@ export type Kpi = {
 
 export type OverviewMetrics = {
   kpis: Kpi[];
-  volume: { d: string; v: number }[];
+  volume: { d: string; v: number; partial?: boolean }[];
   outcomes: { outcome: CallOutcome; label: string; n: number; color: string }[];
   totalCalls: number;
 };
@@ -110,22 +112,42 @@ export async function getOverviewMetrics(
 ): Promise<OverviewMetrics> {
   const supabase = await createClient();
 
-  const today = startOfDay(new Date());
+  const now = new Date();
+  const today = startOfDay(now);
   const rangeStart = new Date(today.getTime() - (days - 1) * DAY_MS);
-  const rangeEnd = new Date(today.getTime() + DAY_MS); // exclusive
   const prevStart = new Date(rangeStart.getTime() - days * DAY_MS);
+
+  /**
+   * COMPARE ELAPSED TIME, NOT NOMINAL LENGTH.
+   *
+   * Both windows are seven days on a calendar, but the current one is still
+   * running. Read at 08:41 on the seventh day, it holds six days and nine
+   * hours of calls, and it was being compared against a previous window that
+   * had all seven days in it. Every count-based figure on the dashboard was
+   * therefore understated, and by a lot: Blue Harbor's calls read "+32%" when
+   * the like-for-like number was +42%. It also got worse the earlier in the
+   * day someone looked, so the same week could show a different figure at
+   * 9am and at 6pm with no new calls in between.
+   *
+   * The previous window is cut to the same elapsed length as the current one,
+   * so both cover an equal amount of REAL time. `p_to: now` on the current
+   * window changes nothing in production, where no call has a start time in
+   * the future, but it keeps the two windows defined the same way.
+   */
+  const elapsedMs = now.getTime() - rangeStart.getTime();
+  const prevEnd = new Date(prevStart.getTime() + elapsedMs);
 
   const [{ data: current, error: curErr }, { data: previous, error: prevErr }] =
     await Promise.all([
       supabase.rpc("call_stats_daily", {
         p_tenant_id: tenantId,
         p_from: rangeStart.toISOString(),
-        p_to: rangeEnd.toISOString(),
+        p_to: now.toISOString(),
       }),
       supabase.rpc("call_stats_daily", {
         p_tenant_id: tenantId,
         p_from: prevStart.toISOString(),
-        p_to: rangeStart.toISOString(),
+        p_to: prevEnd.toISOString(),
       }),
     ]);
 
@@ -249,6 +271,24 @@ export async function getOverviewMetrics(
   let running = 0;
   const minutesSpark = dayMinutes.map((m) => (running += m));
 
+  /**
+   * Sparklines show COMPLETE days only.
+   *
+   * The big volume chart can afford to draw today hatched and write "so far"
+   * under it. A 84x28px sparkline cannot explain anything, so a final point
+   * holding a few hours of calls just draws a cliff, and the card then shows a
+   * green "+42%" beside a line that appears to be falling off a table. The
+   * cliff is an artefact of the clock, not a change in the business.
+   *
+   * What is left is still a real trend and can still slope down: this window
+   * genuinely starts at 18 and 20 calls and settles at 13. A week can be well
+   * ahead of the one before it and still be easing off day to day. The two
+   * answer different questions, which is why the sparkline carries a title
+   * saying which one it answers.
+   */
+  const trim = <T,>(series: T[]) => series.slice(0, -1);
+  const SPARK_TITLE = `Calls per day across the last ${days - 1} complete days. The percentage above compares this period's total with the one before it, which is a different question.`;
+
   const kpis: Kpi[] = [
     {
       label: "Calls handled",
@@ -256,7 +296,8 @@ export async function getOverviewMetrics(
       delta: pctDelta(calls, prevCalls),
       dir: calls >= prevCalls ? "up" : "down",
       note: `vs previous ${days} days`,
-      spark: dayCounts,
+      spark: trim(dayCounts),
+      sparkTitle: SPARK_TITLE,
       breakdown: { value: leads.toLocaleString(), label: "became leads" },
     },
     {
@@ -265,10 +306,15 @@ export async function getOverviewMetrics(
       delta: pctDelta(inquiries, prevInquiries),
       dir: inquiries >= prevInquiries ? "up" : "down",
       note: `vs previous ${days} days`,
-      spark: dayInquiries,
+      spark: trim(dayInquiries),
+      sparkTitle: SPARK_TITLE.replace("Calls per day", "Trip enquiries per day"),
+      // "more asked for a quote" read as a week-on-week increase, which is
+      // what the row above it means. These are DIFFERENT PEOPLE: a call
+      // carries exactly one outcome, so the 17 who asked for a quote are not
+      // among the 29 who left an enquiry. "other callers" says that.
       breakdown: {
         value: quotes.toLocaleString(),
-        label: "more asked for a quote",
+        label: "other callers asked for a quote",
       },
     },
     {
@@ -291,7 +337,8 @@ export async function getOverviewMetrics(
         "qualified the caller properly or that the caller went in circles, so " +
         "there is no good or bad direction to claim.",
       note: `vs previous ${days} days`,
-      spark: dayAvgMinutes,
+      spark: trim(dayAvgMinutes),
+      sparkTitle: SPARK_TITLE.replace("Calls per day", "Average handle time per day"),
       // The seconds the headline percentage stands for, then the workload the
       // average is drawn from. Total talk time is the useful complement to an
       // average, and the daily stats RPC returns no per-call maximum to report
@@ -319,7 +366,8 @@ export async function getOverviewMetrics(
             timeZone: "UTC",
           })}`
         : "current period",
-      spark: minutesSpark,
+      spark: trim(minutesSpark),
+      sparkTitle: `Minutes used so far this period, day by day.`,
       breakdown: included
         ? {
             value: Math.max(0, included - minutesUsed).toLocaleString(),
@@ -331,7 +379,15 @@ export async function getOverviewMetrics(
 
   return {
     kpis,
-    volume: dayLabels.map((d, i) => ({ d, v: dayCounts[i] })),
+    // The last bucket is today, which is still filling up. Flagged rather
+    // than hidden: an agency wants to see today, but a bar holding four hours
+    // of calls next to six bars holding a full day each reads as a collapse in
+    // volume unless the chart says otherwise.
+    volume: dayLabels.map((d, i) => ({
+      d,
+      v: dayCounts[i],
+      partial: i === dayLabels.length - 1,
+    })),
     outcomes: outcomeCounts,
     totalCalls: calls,
   };
