@@ -204,13 +204,13 @@ export async function getOverviewMetrics(
   const prevAvg = prevHandledN
     ? sum(prevHandled, (r) => r.total_seconds) / prevHandledN
     : 0;
-  const avgDeltaSec = Math.round(avg - prevAvg);
 
   // --- breakdown figures for the KPI sub-lines ---
-  const voicemails = sum(
-    rows.filter((r) => r.outcome === "voicemail"),
-    (r) => r.n
-  );
+  // The voicemail count and the absolute change in handle time both used to
+  // live here, as second breakdown lines. They are gone because each card now
+  // carries one figure: the voicemail total is already on the Outcomes panel
+  // below, and the absolute change was the headline percentage restated in
+  // other units.
   const quotes = sum(
     rows.filter((r) => r.outcome === "quote_requested"),
     (r) => r.n

@@ -761,8 +761,24 @@ textarea.input{height:auto;padding:12px 14px;min-height:110px;resize:vertical;li
 /* A column with the breakdown pinned to the bottom. The tiles are grid items
    and already stretch to equal height, but a card whose breakdown is one line
    next to one that has two left a block of dead space under the shorter one. */
-.kpi{padding:20px;position:relative;overflow:hidden;display:flex;flex-direction:column}
-.kpi .kpi-breakdown{margin-top:auto}
+.kpi{
+  padding:20px;position:relative;overflow:hidden;display:flex;flex-direction:column;
+  /* One value, used on both sides of the breakdown divider. Changing it here
+     keeps the rule equidistant from the sparkline above and the figure below,
+     which is the whole point of it being a variable rather than two numbers
+     that drift apart. */
+  --kpi-rule-gap:18px;
+}
+/* The rule above the divider, and why it is not `margin-top` alone.
+   `margin-top:auto` is what bottom-aligns the divider so four cards line up.
+   But auto resolves to whatever height is left over, and on the TALLEST card
+   in the row there is none, so it collapses to 0 and the divider ends up
+   sitting directly under the sparkline. The gap has to come from something
+   auto cannot eat, so it is set on the sparkline row instead, and matched by
+   the breakdown's own padding on the other side of the line. Same value both
+   sides, so the rule reads as equidistant from the graph and the text. */
+.kpi .kpi-breakdown{margin-top:auto;padding-top:var(--kpi-rule-gap)}
+.kpi .kpi-foot{margin-bottom:var(--kpi-rule-gap)}
 .kpi .lab{margin-bottom:14px}
 .kpi-val{display:flex;align-items:baseline;gap:5px}
 .kpi-val b{font-size:32px;font-weight:600;letter-spacing:-.04em;line-height:1}
@@ -1333,7 +1349,8 @@ th.r{text-align:right;padding-right:0}
 .call-dur{text-align:right}
 /* Figures, not a sentence. The number carries the weight; the label stays
    quiet, so a row of four cards can be read at a glance. */
-.kpi-breakdown{display:flex;flex-wrap:wrap;gap:4px 18px;margin-top:12px;padding-top:11px;
+.kpi-breakdown{display:flex;flex-wrap:wrap;gap:4px 18px;
+  margin-top:var(--kpi-rule-gap);padding-top:var(--kpi-rule-gap);
   border-top:1px solid var(--border)}
 .kpi-breakdown span{display:flex;align-items:baseline;gap:5px;font-size:11px;color:var(--muted);line-height:1.3}
 .kpi-breakdown b{font-size:13px;font-weight:600;color:var(--text-2);letter-spacing:-.01em}
