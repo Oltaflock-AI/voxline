@@ -794,6 +794,12 @@ textarea.input{height:auto;padding:12px 14px;min-height:110px;resize:vertical;li
 .delta.flat{color:var(--muted)}
 .delta svg{width:11px;height:11px}
 .spark{width:84px;height:28px;flex-shrink:0;opacity:.95}
+/* A native tooltip appears after about a second of hovering and gives no sign
+   beforehand that it is there at all, which is why the sparkline's explanation
+   went unfound. The help cursor is the only affordance that costs no space on
+   an already full card. Applied to the two things that carry an explanation:
+   a titled sparkline, and a delta that is grey and has to say why. */
+.spark[role="img"],.delta.flat[title]{cursor:help}
 
 /* ---------- charts ---------- */
 .grid-2{display:grid;grid-template-columns:1.6fr 1fr;gap:16px;margin-bottom:20px}
