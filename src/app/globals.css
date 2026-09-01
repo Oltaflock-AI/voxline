@@ -762,7 +762,16 @@ textarea.input{height:auto;padding:12px 14px;min-height:110px;resize:vertical;li
    and already stretch to equal height, but a card whose breakdown is one line
    next to one that has two left a block of dead space under the shorter one. */
 .kpi{
-  padding:20px;position:relative;overflow:hidden;display:flex;flex-direction:column;
+  /* NO `overflow:hidden` here, deliberately. It used to clip the hover
+     tooltips: at 1101px, the narrowest the four-column row ever gets, a card
+     is 183px wide and its tooltip is 172px plus padding, so the text was cut
+     off exactly where the cards are tightest and the explanation is most
+     wanted. Nothing needs the clip. The only absolutely positioned thing in a
+     card is `.card::after`, the gradient hairline, and that is `inset:0` on
+     the card itself, so it is bounded by its own geometry rather than by an
+     ancestor's overflow. Every other `.card` in the portal renders it without
+     a clip already. */
+  padding:20px;position:relative;display:flex;flex-direction:column;
   /* One value, used on both sides of the breakdown divider. Changing it here
      keeps the rule equidistant from the sparkline above and the figure below,
      which is the whole point of it being a variable rather than two numbers
@@ -794,12 +803,43 @@ textarea.input{height:auto;padding:12px 14px;min-height:110px;resize:vertical;li
 .delta.flat{color:var(--muted)}
 .delta svg{width:11px;height:11px}
 .spark{width:84px;height:28px;flex-shrink:0;opacity:.95}
-/* A native tooltip appears after about a second of hovering and gives no sign
-   beforehand that it is there at all, which is why the sparkline's explanation
-   went unfound. The help cursor is the only affordance that costs no space on
-   an already full card. Applied to the two things that carry an explanation:
-   a titled sparkline, and a delta that is grey and has to say why. */
-.spark[role="img"],.delta.flat[title]{cursor:help}
+/* ---------- tooltips ---------- */
+/* Rendered by the page, not by the browser.
+   A native `title` is drawn by the operating system: it waits about a second,
+   gives no sign beforehand that it exists, and cannot be captured in a
+   screenshot, so there is no way to prove it works. Two attempts at one on the
+   sparkline could not be found by hand. This version appears at once, is
+   styled like the rest of the portal, and a test can hover it and look.
+
+   Anchored bottom-right and kept narrow because `.kpi` clips its overflow, so
+   a tooltip wider or taller than the space above the sparkline is cut off
+   rather than shown. The copy it carries is written short for the same reason. */
+.tip{position:relative;display:inline-flex}
+.tip::after{
+  content:attr(data-tip);
+  position:absolute;bottom:calc(100% + 9px);right:0;z-index:20;
+  width:max-content;max-width:172px;
+  padding:8px 10px;border-radius:9px;
+  background:var(--surface-3);border:1px solid var(--border-2);
+  box-shadow:0 10px 26px -12px rgba(0,0,0,.7);
+  font-size:10.5px;line-height:1.4;font-weight:450;letter-spacing:0;
+  color:var(--text-2);text-align:left;white-space:normal;
+  /* `display:none` rather than `visibility:hidden`, and no fade.
+     A hidden-but-visible box still contributes to its anchor's scrollWidth,
+     so the tooltip made every `.delta` measure 172px wide inside a 39px box.
+     The responsive audit caught that at all seven widths: nothing looked
+     wrong, but the anchor was permanently reporting itself as overflowing,
+     which is exactly the signal the audit exists to trust. Not rendering it
+     until it is wanted costs a fade this element does not need. */
+  display:none;pointer-events:none;
+}
+.tip:hover::after,.tip:focus-visible::after{display:block}
+/* The cursor is the affordance. Without it nothing says the card has more to
+   say, which is half of why the earlier tooltip went unfound. */
+.tip{cursor:help}
+/* The delta sits at the card's left edge, so its tooltip opens rightward
+   instead, or it would be clipped against the padding. */
+.delta.tip::after{right:auto;left:0}
 
 /* ---------- charts ---------- */
 .grid-2{display:grid;grid-template-columns:1.6fr 1fr;gap:16px;margin-bottom:20px}

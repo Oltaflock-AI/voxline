@@ -287,7 +287,9 @@ export async function getOverviewMetrics(
    * saying which one it answers.
    */
   const trim = <T,>(series: T[]) => series.slice(0, -1);
-  const SPARK_TITLE = `Calls per day across the last ${days - 1} complete days. The percentage above compares this period's total with the one before it, which is a different question.`;
+  // Kept short deliberately. The tooltip is rendered inside the card, which
+  // clips its overflow, so a paragraph here would be cut off rather than read.
+  const SPARK_TITLE = `Calls per day, complete days only. The % above compares whole periods, not days.`;
 
   const kpis: Kpi[] = [
     {
@@ -307,7 +309,7 @@ export async function getOverviewMetrics(
       dir: inquiries >= prevInquiries ? "up" : "down",
       note: `vs previous ${days} days`,
       spark: trim(dayInquiries),
-      sparkTitle: SPARK_TITLE.replace("Calls per day", "Trip enquiries per day"),
+      sparkTitle: SPARK_TITLE.replace("Calls per day", "Enquiries per day"),
       // "more asked for a quote" read as a week-on-week increase, which is
       // what the row above it means. These are DIFFERENT PEOPLE: a call
       // carries exactly one outcome, so the 17 who asked for a quote are not
@@ -333,9 +335,8 @@ export async function getOverviewMetrics(
       // and declines the verdict. The flat mark and its tooltip say so.
       dir: "flat",
       neutralWhy:
-        "Shown without a colour on purpose. A longer call can mean the agent " +
-        "qualified the caller properly or that the caller went in circles, so " +
-        "there is no good or bad direction to claim.",
+        "No colour on purpose: a longer call can mean better qualifying, or a " +
+        "caller going in circles.",
       note: `vs previous ${days} days`,
       spark: trim(dayAvgMinutes),
       sparkTitle: SPARK_TITLE.replace("Calls per day", "Average handle time per day"),
@@ -357,8 +358,7 @@ export async function getOverviewMetrics(
         : "no plan",
       dir: "flat",
       neutralWhy:
-        "This is how much of the plan has been used so far, not a change on " +
-        "the previous week, so there is no up or down to show.",
+        "How much of the plan is used so far, not a change on last week.",
       note: usage?.period_end
         ? `resets ${new Date(usage.period_end).toLocaleDateString("en-US", {
             month: "short",

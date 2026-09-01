@@ -46,8 +46,8 @@ export function KpiCard({ kpi }: { kpi: Kpi }) {
             not green like the others.
           */}
           <span
-            className={`delta ${kpi.dir}`}
-            title={kpi.dir === "flat" ? kpi.neutralWhy : undefined}
+            className={`delta ${kpi.dir}${kpi.dir === "flat" && kpi.neutralWhy ? " tip" : ""}`}
+            data-tip={kpi.dir === "flat" ? kpi.neutralWhy : undefined}
           >
             {kpi.dir === "up" && <ArrowUp />}
             {kpi.dir === "down" && <ArrowDown />}
@@ -56,7 +56,19 @@ export function KpiCard({ kpi }: { kpi: Kpi }) {
           </span>
           <span className="kpi-note">{kpi.note}</span>
         </span>
-        <Sparkline data={kpi.spark} title={kpi.sparkTitle} />
+        {/*
+          Rendered tooltip, not the browser's. A native `title` is drawn by the
+          OS: it waits about a second, gives no sign beforehand that it exists,
+          and cannot be screenshotted, so there is no way to prove it works.
+          This one is part of the page, appears at once, and can be tested.
+        */}
+        {kpi.sparkTitle ? (
+          <span className="tip" data-tip={kpi.sparkTitle}>
+            <Sparkline data={kpi.spark} title={kpi.sparkTitle} />
+          </span>
+        ) : (
+          <Sparkline data={kpi.spark} />
+        )}
       </div>
       {kpi.breakdown && (
         <div className="kpi-breakdown">
