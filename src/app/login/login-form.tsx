@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { login, type LoginState } from "./actions";
 
@@ -32,6 +32,7 @@ export function LoginForm({ next }: { next: string }) {
   const [state, formAction] = useActionState<LoginState, FormData>(login, {
     error: null,
   });
+  const [showPassword, setShowPassword] = useState(false);
 
   return (
     <form action={formAction} noValidate>
@@ -58,15 +59,45 @@ export function LoginForm({ next }: { next: string }) {
 
       <div className="field">
         <label htmlFor="password">Password</label>
-        <input
-          className="input"
-          type="password"
-          id="password"
-          name="password"
-          placeholder="••••••••••"
-          autoComplete="current-password"
-          required
-        />
+        {/*
+          Show/hide, because a password typed wrong on a phone keyboard is the
+          commonest reason a correct password "does not work", and the only way
+          to check is to retype it blind.
+
+          The button is type="button": inside a form, a button with no type
+          defaults to submit, so tapping the eye would try to sign in with a
+          half-typed password.
+        */}
+        <div className="input-with-action">
+          <input
+            className="input"
+            type={showPassword ? "text" : "password"}
+            id="password"
+            name="password"
+            placeholder="••••••••••"
+            autoComplete="current-password"
+            required
+          />
+          <button
+            type="button"
+            className="input-action"
+            onClick={() => setShowPassword((v) => !v)}
+            aria-label={showPassword ? "Hide password" : "Show password"}
+            aria-pressed={showPassword}
+          >
+            {showPassword ? (
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M10.6 6.1A9.9 9.9 0 0 1 12 6c5.5 0 9 6 9 6a15 15 0 0 1-2.4 3.1M6.6 6.6A15 15 0 0 0 3 12s3.5 6 9 6a9.6 9.6 0 0 0 4-.9" />
+                <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2M3 3l18 18" />
+              </svg>
+            ) : (
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 12s3.5-6 9-6 9 6 9 6-3.5 6-9 6-9-6-9-6Z" />
+                <circle cx="12" cy="12" r="2.6" />
+              </svg>
+            )}
+          </button>
+        </div>
       </div>
 
       <SubmitButton />

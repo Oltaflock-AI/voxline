@@ -13,10 +13,3 @@ export const STAGES: { key: LeadStage; title: string; color: string }[] = [
   { key: "booked", title: "Booked", color: "var(--positive)" },
   { key: "traveling", title: "Traveling", color: "var(--muted)" },
 ];
-
-export const STAGE_TITLES: Record<LeadStage, string> = {
-  new_inquiry: "New inquiry",
-  quoted: "Quoted",
-  booked: "Booked",
-  traveling: "Traveling",
-};

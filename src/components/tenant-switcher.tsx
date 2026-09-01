@@ -62,7 +62,7 @@ export function TenantSwitcher({
       <span className="t-logo">{current.initials}</span>
       <span className="meta">
         <span className="name">{current.name}</span>
-        <span className="plan">{current.planName?.toUpperCase() ?? "—"}</span>
+        <span className="plan">{current.planName?.toUpperCase() ?? "NO PLAN"}</span>
       </span>
     </>
   );
@@ -110,7 +110,7 @@ export function TenantSwitcher({
               <span className="t-logo">{t.initials}</span>
               <span className="meta">
                 <span className="name">{t.name}</span>
-                <span className="plan">{t.planName?.toUpperCase() ?? "—"}</span>
+                <span className="plan">{t.planName?.toUpperCase() ?? "NO PLAN"}</span>
               </span>
             </button>
           ))}

@@ -190,8 +190,8 @@ The prototype demonstrates every screen. Match its layout and behaviour. This se
 ### 6.3 Calls (Phase 1)
 - Paginated list, newest first. Filter chips with live counts: All, Inquiries, Quotes, Voicemail, Not a fit, mapped to `outcome`.
 - Row: caller name or "Unknown Caller", timestamp, outcome badge, duration, coloured mini waveform tinted by outcome.
-- Expanding a row reveals the audio player (real HTML5 playback against a short-lived signed URL), the speaker-labelled transcript, and the **trip brief block** with destination, dates, party, budget and occasion plus a link through to the lead.
-- Only one row open at a time. Per-filter empty state.
+- Each row links to a dedicated call-detail page (`/app/[tenant]/calls/[callId]`), queried by both tenant and call id so a call outside the signed-in agency 404s rather than leaking data. The page shows the audio player (real HTML5 playback against a short-lived signed URL, with an explicit pending/ready/unavailable/failed recording state — Sarvam's WAV can lag behind the transcript by several minutes), the speaker-labelled transcript, and the **trip brief block** with destination, dates, party, budget and occasion plus a link through to the lead. Desktop: two-column layout, recording sticky while the transcript scrolls. Mobile: single column, recording first, normal document flow. *(Changed from Phase 1's original expanding-row design — see §11 decision log.)*
+- Per-filter empty state.
 - Search by caller name or phone: Phase 2.
 
 ### 6.4 Trip pipeline (Phase 1 read and move, Phase 2 full CRUD)
@@ -329,7 +329,7 @@ The site is deliberately dense. Sections are 72px apart, not 120px. Every sectio
 
 Build these as typed React components with the same names, all present in the prototype:
 
-`Logo` (mark + wordmark, sizes md, sm) · `WaveRule` · `WaveWatermark` · `WaveLoader` · `Spotlight` · `Button` (primary / ghost / quiet, sizes sm, md, lg) · `ThemeToggle` · `Badge` (neutral / ok / accent / warn / bad) · `Eyebrow` · `KpiCard` + `Sparkline` · `BarChart` · `OutcomeBars` · `FilterChips` · `CallRow` + `Transcript` + `AudioPlayer` + `TripBrief` · `KanbanColumn` + `LeadCard` · `TenantSwitcher` · `SidebarNav` · `Topbar` + `StatusPill` + `RangePicker` · `UserChip` · `DataTable` · `KeyValueList` · `UsageBar` · `Notice` · `EmptyState` · `Modal` · `CommandPalette` · `Toast` · `LoginCard`.
+`Logo` (mark + wordmark, sizes md, sm) · `WaveRule` · `WaveWatermark` · `WaveLoader` · `Spotlight` · `Button` (primary / ghost / quiet, sizes sm, md, lg) · `ThemeToggle` · `Badge` (neutral / ok / accent / warn / bad) · `Eyebrow` · `KpiCard` + `Sparkline` · `BarChart` · `OutcomeBars` · `FilterChips` · `CallRow` + `CallWave` + `Transcript` + `AudioPlayer` + `TripBrief` (the last three compose the call-detail page, §6.3) · `KanbanColumn` + `LeadCard` · `TenantSwitcher` · `SidebarNav` · `Topbar` + `StatusPill` + `RangePicker` · `UserChip` · `DataTable` · `KeyValueList` · `UsageBar` · `Notice` · `EmptyState` · `Modal` · `CommandPalette` · `Toast` · `LoginCard`.
 
 ### 7.9 Interaction rules that are part of the design
 
@@ -424,6 +424,7 @@ Answered since v1:
 2. **Overage policy:** keep answering and bill the overage. Never silently drop a caller. This matches the marketing copy.
 3. **Brand:** Voxline is a standalone product brand. Oltaflock appears as "A product of Oltaflock AI LLP" in the footer and in legal documents, nowhere else.
 4. **Design direction:** Deep Ink, dark first, as specified in section 7.
+5. **Calls: dedicated detail page, not an expanding row** (revises §6.3). Chosen once Sarvam inbound calls were live and recordings could genuinely lag the transcript by minutes — an inline expansion has no good way to show a call still "preparing" without disrupting the list, and there was more to show (call metadata, provider, handling agent) than an inline panel comfortably holds. Transcript/audio synchronised highlighting was explicitly considered and dropped: accurate alignment against Sarvam's transcript needs paid Batch STT with diarization (₹45/hour), which is cost the product does not need to carry for a display nicety.
 
 Still open, and needed before the phase in brackets:
 

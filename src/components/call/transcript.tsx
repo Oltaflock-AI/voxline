@@ -11,23 +11,30 @@ import type { TranscriptTurn } from "@/lib/calls";
 export function Transcript({ turns }: { turns: TranscriptTurn[] }) {
   if (turns.length === 0) {
     return (
-      <p style={{ fontSize: 13, color: "var(--muted)", padding: "6px 0 2px" }}>
-        No transcript was captured for this call.
-      </p>
+      <div className="transcript-empty">
+        <span className="transcript-empty-mark" aria-hidden="true">“</span>
+        <b>No transcript captured</b>
+        <p>Nothing was captured for this call, so there is no text to show.</p>
+      </div>
     );
   }
 
   return (
-    <>
+    <div className="transcript-list">
       {turns.map((t, i) => (
         <div
           className={`turn${t.speaker === "Agent" ? " agent" : ""}`}
           key={`${t.ts}-${i}`}
         >
-          <span className="sp">{t.speaker}</span>
-          <p>{t.text}</p>
+          <div className="turn-marker" aria-hidden="true">
+            <span>{t.speaker === "Agent" ? "A" : "C"}</span>
+          </div>
+          <div className="turn-copy">
+            <span className="sp">{t.speaker}</span>
+            <p>{t.text}</p>
+          </div>
         </div>
       ))}
-    </>
+    </div>
   );
 }

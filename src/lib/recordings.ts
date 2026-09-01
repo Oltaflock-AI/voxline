@@ -1,5 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import type { VoiceProvider } from "@/lib/ingest";
+import type { Database } from "@/lib/supabase/database.types";
+
+type VoiceProvider = Database["public"]["Enums"]["voice_provider"];
 
 /**
  * ============================================================================
@@ -44,7 +46,8 @@ export function recordingPathFor(
 /**
  * Sarvam's recordings endpoint, whose response shape is UNDOCUMENTED — the
  * published example is literally `{}` (docs.sarvam.ai/conversations/api/
- * analytics/recordings, re-read 2026-08-29, still `{}`).
+ * analytics/recordings, re-read 2026-08-29, still `{}`). A real inbound call
+ * on 2026-08-31 returned raw RIFF/WAV bytes with `content-type: audio/wav`.
  *
  * So this accepts any of the three shapes such an endpoint plausibly returns
  * rather than betting on one: audio bytes directly, or JSON carrying a link

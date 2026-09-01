@@ -50,7 +50,13 @@ insert into tenants (id, name, slug, initials, plan_id, status) values
   ('11111111-1111-1111-1111-111111111111', 'Blue Harbor Travel', 'blueharbor', 'BH',
    '99999999-0000-0000-0000-000000000002', 'active'),
   ('22222222-2222-2222-2222-222222222222', 'Wanderlux Journeys', 'wanderlux',  'WJ',
-   '99999999-0000-0000-0000-000000000003', 'active');
+   '99999999-0000-0000-0000-000000000003', 'active'),
+  -- A freshly-signed agency with NO voice agent and no calls, so the onboarding
+  -- side of Agent Setup is reachable without deleting one of the demo
+  -- agencies. Everything after onboarding — the intake form, the progress
+  -- tracker, the admin queue — is only visible from a tenant in this state.
+  ('33333333-3333-3333-3333-333333333333', 'Coastline Travel Co', 'coastline', 'CT',
+   '99999999-0000-0000-0000-000000000001', 'active');
 
 -- ---------------------------------------------------------------------------
 -- auth users
@@ -114,7 +120,11 @@ insert into memberships (user_id, tenant_id, role) values
   ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '11111111-1111-1111-1111-111111111111', 'owner'),
   ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '22222222-2222-2222-2222-222222222222', 'owner'),
   ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', '11111111-1111-1111-1111-111111111111', 'member'),
-  ('cccccccc-cccc-cccc-cccc-cccccccccccc', '22222222-2222-2222-2222-222222222222', 'member');
+  ('cccccccc-cccc-cccc-cccc-cccccccccccc', '22222222-2222-2222-2222-222222222222', 'member'),
+  -- Listed LAST on purpose. getUserTenants() orders by membership created_at,
+  -- and defaultTenantSlug() takes the first, so putting Coastline earlier would
+  -- land Sofia on an empty agency every time she signs in.
+  ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '33333333-3333-3333-3333-333333333333', 'owner');
 
 insert into platform_admins (user_id) values
   ('dddddddd-dddd-dddd-dddd-dddddddddddd');
@@ -428,5 +438,47 @@ insert into invoices (tenant_id, number, period_label, minutes, amount_cents, st
   ('22222222-2222-2222-2222-222222222222', 'INV-1103', 'Jul 2026', 5820, 124000, 'paid'),
   ('22222222-2222-2222-2222-222222222222', 'INV-1088', 'Jun 2026', 6240, 126640, 'paid'),
   ('22222222-2222-2222-2222-222222222222', 'INV-1071', 'May 2026', 5410, 124000, 'paid');
+
+-- ---------------------------------------------------------------------------
+-- Trip briefs for the bulk-generated calls.
+--
+-- The generator above wrote '{}' for every filled call, so 590 of 598 calls
+-- had no trip brief at all. That was invisible until lead scoring arrived and
+-- reported almost everything as cold — correctly, given the data, but the data
+-- was wrong: an agent that asks for destination and dates on every call does
+-- not produce 590 empty briefs.
+--
+-- Completeness is varied on purpose rather than filled in everywhere. A real
+-- agent gets the whole brief sometimes and half of it other times, and a score
+-- that only ever returns one value would demonstrate nothing. Quote requests
+-- skew complete (the caller stayed long enough to ask for a price); plain
+-- inquiries skew partial.
+-- ---------------------------------------------------------------------------
+update calls set analysis = jsonb_strip_nulls(jsonb_build_object(
+  'destination', (array['Kerala backwaters','Bali','Rajasthan heritage circuit',
+                        'Andaman Islands','Swiss Alps','Vietnam and Cambodia',
+                        'Ladakh','Maldives','Scotland highlands','Kyoto and Osaka'
+                  ])[1 + floor(random() * 10)::int],
+  'dates', (array['Late November','Mid December','Second week of March',
+                  'Diwali week','Early February','Republic Day weekend',
+                  'Summer holidays','First week of October'
+            ])[1 + floor(random() * 8)::int],
+  -- Party size is asked early, so it is present more often than budget.
+  'party_size', case when random() < 0.80
+      then (array['2 travellers','4 travellers','A family of 5','6 adults',
+                  '2 adults and 2 children','A group of 8'
+            ])[1 + floor(random() * 6)::int] end,
+  -- Budget is the question callers most often dodge.
+  'budget', case when random() < (case when outcome = 'quote_requested' then 0.75 else 0.40 end)
+      then (array['Around ₹80,000','₹1.5–2 lakh','Under ₹1 lakh per couple',
+                  '₹3 lakh all in','Flexible, wants options'
+            ])[1 + floor(random() * 5)::int] end,
+  'occasion', case when random() < (case when outcome = 'quote_requested' then 0.65 else 0.35 end)
+      then (array['Honeymoon','Family holiday','Anniversary','First trip abroad',
+                  'Milestone birthday','Work break'
+            ])[1 + floor(random() * 6)::int] end
+))
+where outcome in ('inquiry_captured', 'quote_requested')
+  and analysis = '{}'::jsonb;
 
 commit;

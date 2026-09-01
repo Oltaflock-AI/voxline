@@ -1,6 +1,32 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import {
+  retrySarvamRecording,
+  type RecordingStatus,
+} from "@/lib/recording-retry";
+
+export async function getRecordingStatus(
+  callId: string
+): Promise<RecordingStatus> {
+  const supabase = await createClient();
+
+  // Authorise with the caller's RLS-scoped client before the retry helper uses
+  // the service role. A guessed call id must never become a way to probe or
+  // mutate another tenant's recording state.
+  const { data: call } = await supabase
+    .from("calls")
+    .select("id, recording_path, recording_status")
+    .eq("id", callId)
+    .maybeSingle();
+
+  if (!call) return "unavailable";
+  if (call.recording_path) return "ready";
+
+  const status = call.recording_status as RecordingStatus;
+  if (status !== "pending") return status;
+  return retrySarvamRecording(call.id);
+}
 
 /**
  * Mint a short-lived signed URL for a call recording.

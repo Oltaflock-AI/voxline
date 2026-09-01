@@ -36,7 +36,7 @@ export default function Home() {
 
       <main>
         <section className="hero">
-          <div className="hero-in">
+          <div className="hero-solo">
             <span className="eyebrow">A product of Oltaflock AI LLP</span>
             <h1 className="display" style={{ fontSize: "clamp(38px, 6vw, 72px)" }}>
               Your phone line,{" "}
@@ -52,9 +52,9 @@ export default function Home() {
               }}
             >
               Voxline answers your agency&rsquo;s calls, captures a structured
-              trip brief — destination, dates, party size, budget, occasion —
-              and puts it in your consultants&rsquo; pipeline before the caller
-              has hung up.
+              trip brief (destination, dates, party size, budget, occasion) and
+              puts it in your consultants&rsquo; pipeline before the caller has
+              hung up.
             </p>
 
             <div className="hero-cta" style={{ marginTop: 30 }}>
@@ -95,8 +95,8 @@ export default function Home() {
               <div className="card card-pad">
                 <h3>Captures the trip brief</h3>
                 <p style={{ color: "var(--muted)", fontSize: 14, marginTop: 8 }}>
-                  Destination, dates, party size, budget and occasion —
-                  structured, not a wall of transcript.
+                  Destination, dates, party size, budget and occasion, all
+                  structured rather than left as a wall of transcript.
                 </p>
               </div>
               <div className="card card-pad">

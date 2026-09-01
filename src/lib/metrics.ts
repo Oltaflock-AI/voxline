@@ -11,8 +11,28 @@ export type Kpi = {
   frac?: string;
   delta: string;
   dir: "up" | "down" | "flat";
+  /**
+   * Why this card shows no verdict. Only read when `dir` is "flat", where it
+   * becomes the tooltip on the grey marker. Green and red are `--positive` and
+   * `--negative`, so they claim a figure moved in a good or a bad direction;
+   * some figures cannot support that claim, and this says which and why.
+   */
+  neutralWhy?: string;
   note: string;
   spark: number[];
+  /**
+   * ONE supporting figure, as a number and a quiet label.
+   *
+   * Deliberately capped at one. Two lines of support per card turned the row
+   * into something to read rather than something to scan, and the second line
+   * was usually either restating the headline ("+0:05 longer per call" under a
+   * "+3%" delta) or repeating a neighbouring card ("46 of 96 calls became
+   * leads" under a card already showing 46 leads).
+   *
+   * The bar for what goes here: it must be a fact the agency cannot already
+   * see on this card or the one beside it, and one they would act on.
+   */
+  breakdown?: { value: string; label: string };
 };
 
 export type OverviewMetrics = {
@@ -186,6 +206,27 @@ export async function getOverviewMetrics(
     : 0;
   const avgDeltaSec = Math.round(avg - prevAvg);
 
+  // --- breakdown figures for the KPI sub-lines ---
+  const voicemails = sum(
+    rows.filter((r) => r.outcome === "voicemail"),
+    (r) => r.n
+  );
+  const quotes = sum(
+    rows.filter((r) => r.outcome === "quote_requested"),
+    (r) => r.n
+  );
+  // Deliberately NOT reporting an "answered" count. It would have to be
+  // `calls - voicemails`, and `not_a_fit` carries two different things: a real
+  // person who was not a fit, AND a call that never connected at all (see the
+  // outcome mapping in lib/providers/sarvam.ts). Counting both as answered
+  // would overstate how many callers the agent actually reached, and the
+  // schema has no way to separate them.
+  const leads = inquiries + quotes;
+  // Both outcomes that create a lead, over everything that rang. This is the
+  // number a travel agency would actually put in front of its owner.
+  const totalTalkSeconds = sum(rows, (r) => r.total_seconds);
+
+
   // --- KPI 4: minutes used against the plan quota ---
   const { data: usage } = await supabase
     .from("usage_periods")
@@ -216,6 +257,7 @@ export async function getOverviewMetrics(
       dir: calls >= prevCalls ? "up" : "down",
       note: `vs previous ${days} days`,
       spark: dayCounts,
+      breakdown: { value: leads.toLocaleString(), label: "became leads" },
     },
     {
       label: "Trip inquiries",
@@ -224,16 +266,40 @@ export async function getOverviewMetrics(
       dir: inquiries >= prevInquiries ? "up" : "down",
       note: `vs previous ${days} days`,
       spark: dayInquiries,
+      breakdown: {
+        value: quotes.toLocaleString(),
+        label: "more asked for a quote",
+      },
     },
     {
       label: "Avg handle time",
       value: fmtDuration(avg),
-      // A longer call is not automatically worse — it often means a real
-      // conversation — so this is reported without a good/bad direction.
-      delta: `${avgDeltaSec >= 0 ? "+" : "-"}${fmtDuration(Math.abs(avgDeltaSec))}`,
+      // A percentage, like the two cards to its left, so the four second rows
+      // can be read against each other at a glance. This used to be "+0:05",
+      // a duration sitting in the same slot as two percentages, which made the
+      // row impossible to compare across cards.
+      delta: pctDelta(avg, prevAvg),
+      // Stays grey on purpose, and is the answer to "why is this one not
+      // green": green here is `--positive`, so it is a verdict, not an arrow.
+      // A longer call often means the agent got further into qualifying the
+      // caller, and a much longer one means it got stuck. Neither reading is
+      // safe to assert from the number alone, so the card reports the movement
+      // and declines the verdict. The flat mark and its tooltip say so.
       dir: "flat",
+      neutralWhy:
+        "Shown without a colour on purpose. A longer call can mean the agent " +
+        "qualified the caller properly or that the caller went in circles, so " +
+        "there is no good or bad direction to claim.",
       note: `vs previous ${days} days`,
       spark: dayAvgMinutes,
+      // The seconds the headline percentage stands for, then the workload the
+      // average is drawn from. Total talk time is the useful complement to an
+      // average, and the daily stats RPC returns no per-call maximum to report
+      // a spread from.
+      breakdown: {
+        value: `${Math.round(totalTalkSeconds / 60).toLocaleString()}m`,
+        label: "of talk time handled",
+      },
     },
     {
       label: "Minutes used",
@@ -243,6 +309,9 @@ export async function getOverviewMetrics(
         ? `${Math.round((minutesUsed / included) * 100)}% of plan`
         : "no plan",
       dir: "flat",
+      neutralWhy:
+        "This is how much of the plan has been used so far, not a change on " +
+        "the previous week, so there is no up or down to show.",
       note: usage?.period_end
         ? `resets ${new Date(usage.period_end).toLocaleDateString("en-US", {
             month: "short",
@@ -251,6 +320,12 @@ export async function getOverviewMetrics(
           })}`
         : "current period",
       spark: minutesSpark,
+      breakdown: included
+        ? {
+            value: Math.max(0, included - minutesUsed).toLocaleString(),
+            label: "minutes left this period",
+          }
+        : undefined,
     },
   ];
 

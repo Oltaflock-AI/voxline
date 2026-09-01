@@ -75,8 +75,8 @@ export default async function BillingPage(
             <>
               <div className="card-sub">
                 {plan.included_minutes.toLocaleString()} minutes included · $
-                {(plan.overage_cents_per_min / 100).toFixed(2)} per minute
-                overage
+                {(plan.overage_cents_per_min / 100).toFixed(2)} per extra
+                minute
               </div>
               <UsageBar used={used} included={plan.included_minutes} />
             </>
@@ -149,7 +149,9 @@ export default async function BillingPage(
       <div className="card card-pad">
         <div className="card-head">
           <h3>Invoice history</h3>
-          <span className="card-sub">Paid automatically on file</span>
+          <span className="card-sub">
+            Paid automatically from your payment method on file
+          </span>
         </div>
 
         {invoices && invoices.length > 0 ? (
@@ -166,8 +168,8 @@ export default async function BillingPage(
             <tbody>
               {invoices.map((inv) => (
                 <tr key={inv.id}>
-                  <td className="mono">{inv.number ?? "—"}</td>
-                  <td>{inv.period_label ?? "—"}</td>
+                  <td className="mono">{inv.number ?? "Not set"}</td>
+                  <td>{inv.period_label ?? "Not set"}</td>
                   <td className="num">
                     {Number(inv.minutes).toLocaleString()}
                   </td>

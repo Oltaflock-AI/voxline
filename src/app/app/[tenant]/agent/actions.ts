@@ -24,7 +24,7 @@ export async function submitChangeRequest(
     return { error: "Tell us a little more about what you need.", ok: false };
   }
   if (message.length > 4000) {
-    return { error: "That is too long — please keep it under 4000 characters.", ok: false };
+    return { error: "That is too long. Please keep it under 4000 characters.", ok: false };
   }
 
   const supabase = await createClient();

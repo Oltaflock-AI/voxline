@@ -2,6 +2,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import type { Database } from "@/lib/supabase/database.types";
 import type { TranscriptTurn, CallAnalysis } from "@/lib/calls";
 import { storeRecording, type RecordingSource } from "@/lib/recordings";
+import { retrySarvamRecording } from "@/lib/recording-retry";
 
 export type VoiceProvider = Database["public"]["Enums"]["voice_provider"];
 export type CallOutcome = Database["public"]["Enums"]["call_outcome"];
@@ -161,23 +162,54 @@ export async function ingestCall(call: NormalisedCall): Promise<IngestResult> {
   if (call.recording) {
     const { data: existing } = await supabase
       .from("calls")
-      .select("recording_path")
+      .select("recording_path, recording_status, recording_first_attempt_at")
       .eq("id", saved.id)
       .single();
 
     if (!existing?.recording_path) {
-      const path = await storeRecording({
-        source: call.recording,
-        tenantId: agent.tenant_id,
-        provider: call.provider,
-        providerCallId: call.providerCallId,
-      });
-      if (path) {
+      await supabase
+        .from("calls")
+        .update({
+          recording_status: "pending",
+          recording_first_attempt_at:
+            existing?.recording_first_attempt_at ?? new Date().toISOString(),
+          recording_next_retry_at: new Date().toISOString(),
+        })
+        .eq("id", saved.id);
+
+      if (call.recording.kind === "sarvam") {
+        await retrySarvamRecording(saved.id, true);
+      } else {
+        const path = await storeRecording({
+          source: call.recording,
+          tenantId: agent.tenant_id,
+          provider: call.provider,
+          providerCallId: call.providerCallId,
+        });
         await supabase
           .from("calls")
-          .update({ recording_path: path })
+          .update(
+            path
+              ? {
+                  recording_path: path,
+                  recording_status: "ready",
+                  recording_next_retry_at: null,
+                  recording_last_error: null,
+                }
+              : {
+                  recording_status: "failed",
+                  recording_attempts: 1,
+                  recording_next_retry_at: null,
+                  recording_last_error: "Provider recording download failed",
+                }
+          )
           .eq("id", saved.id);
       }
+    } else if (existing.recording_status !== "ready") {
+      await supabase
+        .from("calls")
+        .update({ recording_status: "ready", recording_next_retry_at: null })
+        .eq("id", saved.id);
     }
   }
 

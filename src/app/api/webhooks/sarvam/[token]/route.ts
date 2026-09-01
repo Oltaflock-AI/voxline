@@ -105,7 +105,10 @@ export async function POST(
   });
 
   if (!normalised) {
-    return NextResponse.json({ ok: true, ignored: "missing attempt_id/app_id" });
+    return NextResponse.json({
+      ok: true,
+      ignored: "missing attempt_id/interaction_id/app_id",
+    });
   }
 
   const result = await ingestCall(normalised);

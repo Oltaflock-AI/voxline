@@ -9,6 +9,101 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      agent_request_files: {
+        Row: {
+          created_at: string
+          filename: string
+          id: string
+          mime_type: string
+          request_id: string
+          size_bytes: number
+          storage_path: string
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          filename: string
+          id?: string
+          mime_type: string
+          request_id: string
+          size_bytes: number
+          storage_path: string
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          filename?: string
+          id?: string
+          mime_type?: string
+          request_id?: string
+          size_bytes?: number
+          storage_path?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_request_files_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "agent_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_request_files_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agent_requests: {
+        Row: {
+          created_at: string
+          id: string
+          kind: Database["public"]["Enums"]["agent_request_kind"]
+          note: string | null
+          payload: Json
+          stage: Database["public"]["Enums"]["agent_request_stage"]
+          status_note: string | null
+          tenant_id: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          kind: Database["public"]["Enums"]["agent_request_kind"]
+          note?: string | null
+          payload?: Json
+          stage?: Database["public"]["Enums"]["agent_request_stage"]
+          status_note?: string | null
+          tenant_id: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kind?: Database["public"]["Enums"]["agent_request_kind"]
+          note?: string | null
+          payload?: Json
+          stage?: Database["public"]["Enums"]["agent_request_stage"]
+          status_note?: string | null
+          tenant_id?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_requests_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_log: {
         Row: {
           action: string
@@ -52,11 +147,17 @@ export type Database = {
           created_at: string
           duration_seconds: number
           id: string
+          lead_score: number | null
           minutes_counted_at: string | null
           outcome: Database["public"]["Enums"]["call_outcome"] | null
           provider: Database["public"]["Enums"]["voice_provider"]
           provider_call_id: string
+          recording_attempts: number
+          recording_first_attempt_at: string | null
+          recording_last_error: string | null
+          recording_next_retry_at: string | null
           recording_path: string | null
+          recording_status: string
           started_at: string
           tenant_id: string
           transcript: Json
@@ -69,11 +170,17 @@ export type Database = {
           created_at?: string
           duration_seconds?: number
           id?: string
+          lead_score?: number | null
           minutes_counted_at?: string | null
           outcome?: Database["public"]["Enums"]["call_outcome"] | null
           provider?: Database["public"]["Enums"]["voice_provider"]
           provider_call_id: string
+          recording_attempts?: number
+          recording_first_attempt_at?: string | null
+          recording_last_error?: string | null
+          recording_next_retry_at?: string | null
           recording_path?: string | null
+          recording_status?: string
           started_at?: string
           tenant_id: string
           transcript?: Json
@@ -86,11 +193,17 @@ export type Database = {
           created_at?: string
           duration_seconds?: number
           id?: string
+          lead_score?: number | null
           minutes_counted_at?: string | null
           outcome?: Database["public"]["Enums"]["call_outcome"] | null
           provider?: Database["public"]["Enums"]["voice_provider"]
           provider_call_id?: string
+          recording_attempts?: number
+          recording_first_attempt_at?: string | null
+          recording_last_error?: string | null
+          recording_next_retry_at?: string | null
           recording_path?: string | null
+          recording_status?: string
           started_at?: string
           tenant_id?: string
           transcript?: Json
@@ -532,6 +645,15 @@ export type Database = {
       is_platform_admin: { Args: never; Returns: boolean }
     }
     Enums: {
+      agent_request_kind: "new_agent" | "document_update"
+      agent_request_stage:
+        | "submitted"
+        | "in_review"
+        | "building"
+        | "test_ready"
+        | "number_pending"
+        | "completed"
+        | "cancelled"
       agent_status: "live" | "paused"
       call_outcome:
         | "inquiry_captured"
@@ -672,6 +794,16 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      agent_request_kind: ["new_agent", "document_update"],
+      agent_request_stage: [
+        "submitted",
+        "in_review",
+        "building",
+        "test_ready",
+        "number_pending",
+        "completed",
+        "cancelled",
+      ],
       agent_status: ["live", "paused"],
       call_outcome: [
         "inquiry_captured",

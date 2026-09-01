@@ -38,7 +38,7 @@ export default async function PipelinePage(
         <div>
           <h3 className="panel-title">Trip pipeline</h3>
           <span className="card-sub">
-            Cards are created automatically from qualifying calls.
+            Voxline adds a card here for every qualifying call.
           </span>
         </div>
       </div>

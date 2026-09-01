@@ -1,6 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
 import { requireTenant } from "@/lib/tenant";
 import { ChangeRequestModal } from "@/components/change-request-modal";
+import { AgentRequestForm } from "@/components/agent/agent-request-form";
+import { DocumentUpdateForm } from "@/components/agent/document-update-form";
+import { RequestProgress } from "@/components/agent/request-progress";
 
 /**
  * Agent setup — spec §6.6. Read only, deliberately.
@@ -10,6 +13,12 @@ import { ChangeRequestModal } from "@/components/change-request-modal";
  * That is why there is a notice at the top and a request modal rather than a
  * form: the constraint is a product decision, so the UI states it plainly
  * instead of hiding it behind disabled inputs.
+ *
+ * The page has three states, not two:
+ *   no agent, no request   the onboarding intake form
+ *   no agent, request open the progress tracker — concierge onboarding fails
+ *                          when it is silent, not when it is manual
+ *   agent live             the read-only config, plus document updates
  */
 export default async function AgentPage(
   props: PageProps<"/app/[tenant]/agent">
@@ -18,23 +27,55 @@ export default async function AgentPage(
   const { tenant } = await requireTenant(slug);
 
   const supabase = await createClient();
-  const { data: agent } = await supabase
-    .from("voice_agents")
-    .select("*")
-    .eq("tenant_id", tenant.id)
-    .limit(1)
-    .maybeSingle();
+  const [{ data: agent }, { data: openRequest }] = await Promise.all([
+    supabase
+      .from("voice_agents")
+      .select("*")
+      .eq("tenant_id", tenant.id)
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from("agent_requests")
+      .select("id, stage, status_note, created_at")
+      .eq("tenant_id", tenant.id)
+      .eq("kind", "new_agent")
+      .not("stage", "in", '("completed","cancelled")')
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ]);
 
   if (!agent) {
+    // A request already in flight: show where it has got to rather than the
+    // form again. Someone who has filled this in wants to know what is
+    // happening, not to be asked a second time.
+    if (openRequest) {
+      return (
+        <section className="panel on">
+          <RequestProgress
+            stage={openRequest.stage}
+            statusNote={openRequest.status_note}
+            submittedAt={openRequest.created_at}
+          />
+        </section>
+      );
+    }
+
     return (
       <section className="panel on">
-        <div className="empty">
-          <b>No agent configured yet</b>
+        <div className="notice" style={{ marginBottom: 18 }}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <circle cx="12" cy="12" r="9" />
+            <path d="M12 8v5M12 16.5v.01" />
+          </svg>
           <p>
-            Your Voxline contact wires the voice agent to your phone line during
-            onboarding. It will appear here once it is live.
+            <b>Let&rsquo;s set up your voice agent.</b> Tell us how it should
+            answer your phone and what it needs to find out. We build it, connect
+            a phone number, and let you hear it before it goes live.
           </p>
         </div>
+
+        <AgentRequestForm tenantSlug={tenant.slug} tenantId={tenant.id} />
       </section>
     );
   }
@@ -53,23 +94,26 @@ export default async function AgentPage(
   const rows: [string, string][] = [
     ["Agent name", agent.name],
     ["Phone number", agent.phone_number ?? "Not assigned"],
-    ["Voice", agent.voice_desc ?? "—"],
-    ["Languages", agent.languages.join(", ") || "—"],
+    ["Voice", agent.voice_desc ?? "Not set"],
+    ["Languages", agent.languages.join(", ") || "Not set"],
     [
       "Business hours",
       hours?.days
-        ? `${hours.days}, ${hours.open} – ${hours.close}${hours.tz ? ` ${hours.tz}` : ""}`
-        : "—",
+        ? `${hours.days}, ${hours.open} to ${hours.close}${hours.tz ? ` ${hours.tz}` : ""}`
+        : "Not set",
     ],
-    ["After-hours behaviour", agent.after_hours_behavior ?? "—"],
-    ["Escalation number", agent.escalation_number ?? "—"],
+    ["After-hours behaviour", agent.after_hours_behavior ?? "Not set"],
+    ["Escalation number", agent.escalation_number ?? "Not set"],
     [
       "CRM sync",
       crm?.provider
         ? `${crm.provider[0].toUpperCase()}${crm.provider.slice(1)}, ${crm.status}`
         : "Not connected",
     ],
-    ["Qualification questions", agent.qualification_questions.join(" · ") || "—"],
+    [
+      "Qualification questions",
+      agent.qualification_questions.join(" · ") || "Not set",
+    ],
     ["Recording retention", `${agent.recording_retention_months} months`],
   ];
 
@@ -87,9 +131,9 @@ export default async function AgentPage(
           <path d="M12 8v5M12 16.5v.01" />
         </svg>
         <p>
-          <b>Configuration is concierge-managed.</b> Your agent answers a live
-          phone line, so changes are made by the Voxline team rather than edited
-          directly. Send a request and we usually ship it the same day.
+          <b>The Voxline team makes your changes.</b> Your agent answers a live
+          phone line, so you send us a request instead of editing the settings
+          here. We usually make the change the same day.
         </p>
       </div>
 
@@ -107,6 +151,8 @@ export default async function AgentPage(
           ))}
         </dl>
       </div>
+
+      <DocumentUpdateForm tenantSlug={tenant.slug} tenantId={tenant.id} />
     </section>
   );
 }

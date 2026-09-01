@@ -14,7 +14,7 @@ export function TripBrief({
   leadHref,
 }: {
   analysis: CallAnalysis;
-  leadHref: string;
+  leadHref?: string;
 }) {
   const fields: [string, string | null | undefined][] = [
     ["Destination", analysis.destination],
@@ -50,20 +50,22 @@ export function TripBrief({
         </p>
       )}
 
-      <Link className="brief-link" href={leadHref}>
-        Open in trip pipeline
-        <svg
-          width="13"
-          height="13"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2.4"
-          strokeLinecap="round"
-        >
-          <path d="M5 12h14M13 6l6 6-6 6" />
-        </svg>
-      </Link>
+      {leadHref && (
+        <Link className="brief-link" href={leadHref}>
+          Open in trip pipeline
+          <svg
+            width="13"
+            height="13"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.4"
+            strokeLinecap="round"
+          >
+            <path d="M5 12h14M13 6l6 6-6 6" />
+          </svg>
+        </Link>
+      )}
     </div>
   );
 }

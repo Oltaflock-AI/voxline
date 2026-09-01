@@ -30,10 +30,11 @@ export default async function OverviewPage(props: PageProps<"/app/[tenant]">) {
       .limit(4), // spec §6.2: "the four newest rows"
   ]);
 
-  const peak = metrics.volume.reduce(
-    (best, d) => (d.v > best.v ? d : best),
-    metrics.volume[0] ?? { d: "—", v: 0 }
-  );
+  // No fallback day here. With no calls at all there is no peak to name, and
+  // inventing a placeholder day reads as data. The subtitle drops the clause.
+  const peak = metrics.volume.length
+    ? metrics.volume.reduce((best, d) => (d.v > best.v ? d : best))
+    : null;
   const volumeTotal = metrics.volume.reduce((a, d) => a + d.v, 0);
   const outcomeTotal = metrics.outcomes.reduce((a, o) => a + o.n, 0);
 
@@ -50,7 +51,7 @@ export default async function OverviewPage(props: PageProps<"/app/[tenant]">) {
           <div className="card-head">
             <h3>Call volume</h3>
             <span className="card-sub">
-              {volumeTotal} calls · peak {peak.d}
+              {volumeTotal} calls{peak ? ` · peak ${peak.d}` : ""}
             </span>
           </div>
           <BarChart data={metrics.volume} />

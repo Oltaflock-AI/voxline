@@ -101,3 +101,16 @@ export function formatWhen(iso: string) {
     return `${d.toLocaleDateString("en-US", { weekday: "short", timeZone: "UTC" })} · ${time}`;
   return `${d.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })} · ${time}`;
 }
+
+/** Full timestamp for the call-detail page, kept in the portal's UTC clock. */
+export function formatCallDate(iso: string) {
+  return new Date(iso).toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: "UTC",
+    timeZoneName: "short",
+  });
+}
