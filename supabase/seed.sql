@@ -6,7 +6,7 @@
 -- keys." So the portal we build renders the same data the prototype shows.
 --
 -- ****  DEVELOPMENT ONLY. NEVER RUN THIS AGAINST PRODUCTION.  ****
--- It creates users with a known password and truncates every table first.
+-- It creates users with a known password and truncates the demo tables first.
 -- ============================================================================
 
 -- Outcome key mapping, prototype -> spec §5 enum:
@@ -17,10 +17,15 @@
 
 begin;
 
+-- `plans` is deliberately NOT in this list any more. It is reference data now,
+-- owned by migrations/20260902090000_plans_reference_data.sql, and truncating
+-- it here deleted the rows the migration had just inserted. The tenants insert
+-- below then failed on tenants_plan_id_fkey, because the plan it references no
+-- longer existed. Anything a migration owns must survive a reseed.
 truncate table
   audit_log, change_requests, invoices, usage_periods,
   leads, calls, voice_agents, memberships, platform_admins,
-  profiles, tenants, plans
+  profiles, tenants
 restart identity cascade;
 
 delete from auth.users where email like '%@voxline.test';

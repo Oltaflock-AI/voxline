@@ -2,7 +2,19 @@ import { defineConfig, devices } from "@playwright/test";
 import dotenv from "dotenv";
 
 // The isolation tests talk to Supabase directly, so they need the same env the
-// app uses. Playwright does not read .env.local on its own.
+// app uses. Playwright does not read any .env file on its own.
+//
+// ORDER MATTERS, and it mirrors Next's own precedence: .env.development.local
+// is read BEFORE .env.local, and dotenv does not overwrite a variable that is
+// already set, so the first file to define a key wins.
+//
+// Loading only .env.local was wrong. `vercel env pull` overwrites that file
+// with the DEPLOYED configuration, which points at the production database, so
+// the whole suite silently ran against production. Twenty-seven tests failed
+// looking for seed data that production correctly does not have, and the two
+// that would have been alarming — the cross-tenant isolation checks — were
+// failing for the same boring reason rather than a real security regression.
+dotenv.config({ path: ".env.development.local" });
 dotenv.config({ path: ".env.local" });
 
 export default defineConfig({
