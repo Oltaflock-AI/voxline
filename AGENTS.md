@@ -43,6 +43,56 @@ npm run lint     # eslint
 - New variables: add the key (empty) to `.env.example` with a comment, add real values via `vercel env add NAME <env>` per environment.
 - Names the code expects: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` — the first two carry the `NEXT_PUBLIC_` prefix, the service key must not.
 
+## Environments and their databases
+
+Three environments, three separate Postgres databases. They are not copies of
+each other and never sync.
+
+| Environment | Database | Holds |
+|---|---|---|
+| Local (`npm run dev`, tests) | Docker, `supabase start` | migrations + `seed.sql` |
+| Preview (Vercel) | `eezdyseztlfltmabrely` — project `voxline-preview`, Adnan's personal Supabase org | migrations + `seed.sql` |
+| Production (Vercel) | `brodbnufqvtpifhrpama` — Khush's Supabase org | migrations only |
+
+**A new migration has to be pushed to BOTH cloud databases.** Nothing does this
+for you, and a schema change that lands on one leaves the other broken at
+runtime rather than at build time. Push with `--db-url`; do not `supabase link`,
+because production is in an org most of us cannot see:
+
+```bash
+supabase db push --db-url "postgresql://postgres:PASSWORD@db.<ref>.supabase.co:5432/postgres"
+```
+
+Production's password comes from Khush. Preview's is in `.env.preview-db`
+(gitignored by the `.env*` rule, like every other env file here).
+
+**`seed.sql` must never reach production.** It inserts straight into
+`auth.users` and `platform_admins`, so it creates working logins including a
+platform admin, and the password is a literal in this public repo. It is safe
+today because seeds only run on `supabase db reset`, which is a local command,
+and `db push` applies migrations alone. That safety is entirely a property of
+which command you run:
+
+- **Never run `supabase db reset` against a cloud database.** Not linked, not
+  with `--db-url`. It drops everything and then runs the seed. It is the one
+  command that turns a mistake into a security incident.
+- Anything a migration owns must survive a reseed. `plans` is reference data
+  and lives in `migrations/20260902090000_plans_reference_data.sql`; it used to
+  be truncated by `seed.sql`, which deleted the rows the migration had just
+  inserted and broke every local reset.
+
+**Reference data vs seed data.** Reference data is rows the product is defined
+in terms of, and belongs in a migration. Seed data is example content that
+makes a local database pleasant to work against, and belongs in `seed.sql`. If
+a production feature breaks without a row, it is reference data.
+
+**Local env must not point at production.** `vercel env pull` overwrites
+`.env.local` with the DEPLOYED configuration. Keep local Supabase credentials in
+`.env.development.local`, which Next reads first and a pull cannot clobber.
+`playwright.config.ts` loads the two files in that same order for the same
+reason: it once ran the whole suite, isolation tests included, against
+production.
+
 ## Supabase clients (`src/lib/supabase/`)
 
 | File | Use in | Key |
