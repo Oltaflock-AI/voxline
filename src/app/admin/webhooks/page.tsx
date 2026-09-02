@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { CopyField } from "@/components/admin/copy-field";
+import { getAppUrl } from "@/lib/app-url";
 
 /**
  * The URLs to paste into each provider console.
@@ -11,7 +12,7 @@ import { CopyField } from "@/components/admin/copy-field";
  */
 export default async function AdminWebhooksPage() {
   const admin = createAdminClient();
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const appUrl = getAppUrl();
 
   const { data: agents } = await admin
     .from("voice_agents")

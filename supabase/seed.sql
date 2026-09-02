@@ -36,12 +36,13 @@ delete from auth.users where email like '%@voxline.test';
 --   user admin         dddddddd-dddd-dddd-dddd-dddddddddddd
 
 -- ---------------------------------------------------------------------------
--- plans — prices from spec §1
+-- plans — NOT seeded here any more.
+--
+-- Moved to migrations/20260902090000_plans_reference_data.sql, because a
+-- deployed database needs them and seeds never reach one. The tenants below
+-- still reference the same three ids, which is why that migration fixes them
+-- rather than generating new ones.
 -- ---------------------------------------------------------------------------
-insert into plans (id, name, monthly_price_cents, included_minutes, overage_cents_per_min) values
-  ('99999999-0000-0000-0000-000000000001', 'starter', 19900,  800,  16),
-  ('99999999-0000-0000-0000-000000000002', 'growth',  49900, 2500,  14),
-  ('99999999-0000-0000-0000-000000000003', 'scale',  124000, 6000,  11);
 
 -- ---------------------------------------------------------------------------
 -- tenants
