@@ -33,7 +33,19 @@ export type RecordingSource =
    * for a call that never connected — hence a distinct shape rather than a
    * URL the adapter tries to build.
    */
-  | { kind: "sarvam"; appId: string; interactionId: string };
+  | { kind: "sarvam"; appId: string; interactionId: string }
+  /**
+   * Vapi: the payload DOES carry `artifact.recordingUrl`, and it is useless.
+   * As of the 2026 storage change those URLs point into a private bucket and
+   * return 403 to an unauthenticated GET — which is exactly what happened to
+   * all 19 backfilled calls, every one landing `recording_status = failed`
+   * while the transcript and trip brief were fine.
+   *
+   * Audio comes from an authenticated API endpoint keyed by call id instead,
+   * so this carries the id rather than the dead URL. Same reasoning as Sarvam:
+   * an adapter reports where audio can be OBTAINED, not a link to it.
+   */
+  | { kind: "vapi"; callId: string };
 
 export function recordingPathFor(
   tenantId: string,
@@ -132,6 +144,65 @@ async function fetchSarvamRecording(
   return null;
 }
 
+/**
+ * Vapi's authenticated artifact endpoint.
+ *
+ * `GET /call/{id}/stereo-recording` with a private API key answers 302 with a
+ * short-lived pre-signed URL, and the signed URL needs no credentials of its
+ * own.
+ *
+ * THE REDIRECT IS FOLLOWED BY HAND, and that is the point of this function.
+ * `redirect: "follow"` would re-send the `Authorization` header to whatever
+ * host the signature points at — Google Cloud Storage or S3, neither of which
+ * should ever see a Vapi private key. The fetch spec now strips Authorization
+ * across origins, but relying on a runtime to do that correctly is not worth
+ * it when reading one header and issuing a clean second request is this cheap.
+ *
+ * The signed URL is deliberately not cached anywhere: it expires quickly, and
+ * Vapi's docs say to ask for a fresh one rather than store the redirect target.
+ */
+async function fetchVapiRecording(
+  source: Extract<RecordingSource, { kind: "vapi" }>
+): Promise<Blob | null> {
+  const key = process.env.VAPI_API_KEY;
+  if (!key) {
+    // Not worth alarming about: a deployment without a Vapi key stores calls
+    // with their transcript and trip brief, just no audio.
+    console.warn("[recordings] VAPI_API_KEY unset — skipping recording fetch");
+    return null;
+  }
+
+  const endpoint = `https://api.vapi.ai/call/${encodeURIComponent(source.callId)}/stereo-recording`;
+  const res = await fetch(endpoint, {
+    headers: { Authorization: `Bearer ${key}` },
+    redirect: "manual",
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+  });
+
+  // 302 is the documented success path.
+  if (res.status >= 300 && res.status < 400) {
+    const signed = res.headers.get("location");
+    if (!signed) {
+      console.error("[recordings] vapi redirected with no location header");
+      return null;
+    }
+    return await fetchUrl(signed);
+  }
+
+  // Some clients get the bytes directly rather than a redirect. Accept that.
+  if (res.ok) {
+    const contentType = res.headers.get("content-type") ?? "";
+    if (contentType.startsWith("audio/") || contentType === "application/octet-stream") {
+      return await res.blob();
+    }
+    console.error(`[recordings] vapi returned unexpected content-type ${contentType}`);
+    return null;
+  }
+
+  console.error(`[recordings] vapi ${res.status} for call ${source.callId}`);
+  return null;
+}
+
 async function fetchUrl(url: string): Promise<Blob | null> {
   const res = await fetch(url, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
   if (!res.ok) {
@@ -159,10 +230,19 @@ export async function storeRecording(args: {
 
   let audio: Blob | null = null;
   try {
-    audio =
-      source.kind === "url"
-        ? await fetchUrl(source.url)
-        : await fetchSarvamRecording(source);
+    // A switch rather than a ternary chain, so a fourth provider source is a
+    // compile error here instead of silently taking Sarvam's branch.
+    switch (source.kind) {
+      case "url":
+        audio = await fetchUrl(source.url);
+        break;
+      case "sarvam":
+        audio = await fetchSarvamRecording(source);
+        break;
+      case "vapi":
+        audio = await fetchVapiRecording(source);
+        break;
+    }
   } catch (err) {
     console.error("[recordings] fetch threw", err);
     return null;

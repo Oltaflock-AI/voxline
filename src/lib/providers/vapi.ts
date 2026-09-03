@@ -27,9 +27,13 @@ import type { TranscriptTurn } from "@/lib/calls";
  *    against a real call on 2026-09-03; the id → name shape is the reason this
  *    cannot simply read `structuredData.destination` the way Sarvam does.
  *
- * 3. The recording arrives as a plain URL in the payload, so this reuses
- *    `{ kind: "url" }` like Retell. None of Sarvam's separate-analytics-
- *    endpoint machinery is needed.
+ * 3. The recording URL in the payload is a decoy. `artifact.recordingUrl` is
+ *    present and points into a private bucket that answers 403 to an
+ *    unauthenticated GET, so treating it as `{ kind: "url" }` like Retell
+ *    silently failed every download — 19 backfilled calls, all
+ *    `recording_status = failed`, with transcripts and trip briefs intact.
+ *    Audio needs Vapi's authenticated endpoint, so the source carries the
+ *    call id and lib/recordings.ts fetches it. See fetchVapiRecording().
  *
  * ENVELOPE, VERIFIED. Checked against all 12 real calls on the assistant on
  * 2026-09-03 with scripts/backfill-vapi.mjs, which reports which branch each
@@ -160,7 +164,10 @@ export function normaliseVapiCall(
       ? rawName.trim()
       : (m.call?.customer?.name ?? m.customer?.name ?? null);
 
-  const recordingUrl = m.artifact?.recordingUrl ?? null;
+  // `artifact.recordingUrl` is only read as a FLAG for whether audio exists.
+  // Its value is a private-bucket path that cannot be fetched; the id is what
+  // the authenticated endpoint needs.
+  const hasRecording = Boolean(m.artifact?.recordingUrl);
 
   return {
     provider: "vapi",
@@ -170,7 +177,7 @@ export function normaliseVapiCall(
     callerPhone: m.call?.customer?.number ?? m.customer?.number ?? null,
     startedAt: m.startedAt ? new Date(m.startedAt).toISOString() : undefined,
     durationSeconds,
-    recording: recordingUrl ? { kind: "url", url: recordingUrl } : undefined,
+    recording: hasRecording ? { kind: "vapi", callId: providerCallId } : undefined,
     transcript: normaliseTranscript(payload, callerName),
     analysis,
     // The assistant emits `outcome` as one of the four enum values, so this
