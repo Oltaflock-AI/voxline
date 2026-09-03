@@ -67,6 +67,7 @@ export function EditAgentForm({
           <select className="input" id="ea-provider" name="provider" defaultValue={agent.provider}>
             <option value="sarvam">Sarvam</option>
             <option value="retell">Retell AI</option>
+            <option value="vapi">Vapi</option>
           </select>
         </div>
 

@@ -79,7 +79,7 @@ async function serveAudio() {
 /** A tenant + voice agent that exists only for one test. */
 async function makeScratchTenant(
   label: string,
-  provider: "retell" | "sarvam" = "retell"
+  provider: "retell" | "sarvam" | "vapi" = "retell"
 ) {
   const db = admin();
   const suffix = crypto.randomBytes(6).toString("hex");
@@ -634,6 +634,163 @@ test.describe("aggregation above the PostgREST row cap", () => {
     });
     const dailyTotal = (daily as { n: number }[]).reduce((a, r) => a + Number(r.n), 0);
     expect(dailyTotal, "daily rollup sees every row").toBe(TOTAL);
+
+    await scratch.cleanup();
+  });
+});
+
+/**
+ * Vapi ingestion.
+ *
+ * Two things here are unlike the other providers and are what these tests
+ * actually exist to pin down:
+ *
+ *   1. Every event type lands on the same URL, so the route has to accept and
+ *      drop everything that is not `end-of-call-report`. Answering 500 to a
+ *      mid-call event would make Vapi retry it forever.
+ *   2. Structured outputs are keyed by OUTPUT ID with the field name nested
+ *      inside, so the adapter cannot index by name. The payloads below use the
+ *      real uuid-keyed shape from a live call on 2026-09-03.
+ */
+test.describe("Vapi ingestion", () => {
+  function vapiRequest(token: string, payload: unknown) {
+    return fetch(`${APP_URL}/api/webhooks/vapi/${token}`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+  }
+
+  /** The uuid-keyed shape Vapi actually sends. Names are what matter. */
+  function structuredOutputs(fields: Record<string, string>) {
+    const out: Record<string, { name: string; result: string }> = {};
+    for (const [name, result] of Object.entries(fields)) {
+      out[crypto.randomUUID()] = { name, result };
+    }
+    return out;
+  }
+
+  test("rejects an unrecognised webhook token", async () => {
+    const res = await vapiRequest("0".repeat(64), {
+      message: { type: "end-of-call-report", call: { id: "x" } },
+    });
+    expect(res.status).toBe(401);
+  });
+
+  test("accepts and ignores every event that is not the end-of-call report", async () => {
+    const scratch = await makeScratchTenant("vapi-noise", "vapi");
+    const db = admin();
+
+    // The chatty ones. All must be 200, and none may create a call.
+    for (const type of [
+      "status-update",
+      "transcript",
+      "conversation-update",
+      "speech-update",
+      "tool-calls",
+      "hang",
+    ]) {
+      const res = await vapiRequest(scratch.webhookToken, {
+        message: { type, call: { id: `noise_${type}` } },
+      });
+      expect(res.status, `${type} must not be retried`).toBe(200);
+    }
+
+    const { count } = await db
+      .from("calls")
+      .select("id", { count: "exact", head: true })
+      .eq("tenant_id", scratch.tenantId);
+    expect(count ?? 0).toBe(0);
+    await scratch.cleanup();
+  });
+
+  test("a body claiming another assistant is refused", async () => {
+    const scratch = await makeScratchTenant("vapi-mismatch", "vapi");
+    const res = await vapiRequest(scratch.webhookToken, {
+      message: {
+        type: "end-of-call-report",
+        call: { id: "x" },
+        assistant: { id: "some_other_assistant" },
+      },
+    });
+    expect(res.status).toBe(401);
+    await scratch.cleanup();
+  });
+
+  test("ingests a completed call: transcript, trip brief, lead and minutes", async () => {
+    const scratch = await makeScratchTenant("vapi-ok", "vapi");
+    const db = admin();
+    const callId = `vapi_${crypto.randomBytes(4).toString("hex")}`;
+
+    const payload = {
+      message: {
+        type: "end-of-call-report",
+        endedReason: "customer-ended-call",
+        durationSeconds: 137,
+        startedAt: new Date(Date.now() - 137_000).toISOString(),
+        endedAt: new Date().toISOString(),
+        call: { id: callId, customer: { number: "+13055550142" } },
+        assistant: { id: scratch.retellAgentId },
+        artifact: {
+          messages: [
+            { role: "system", message: "you are ryan" },
+            { role: "bot", message: "Thanks for calling Larkin Travel.", secondsFromStart: 0 },
+            { role: "user", message: "I want to go to Bali.", secondsFromStart: 6 },
+          ],
+          structuredOutputs: structuredOutputs({
+            caller_name: "Adnan",
+            destination: "Bali",
+            dates: "Around December",
+            party_size: "about 20",
+            budget: "Not too sure at the moment",
+            occasion: "Just a regular friends trip",
+            notes: "have some adventure activities",
+            outcome: "inquiry_captured",
+          }),
+        },
+      },
+    };
+
+    // Twice, to prove idempotency on a provider that retries.
+    const first = await vapiRequest(scratch.webhookToken, payload);
+    expect(first.status).toBe(200);
+    const second = await vapiRequest(scratch.webhookToken, payload);
+    expect(second.status).toBe(200);
+
+    const { data: calls } = await db
+      .from("calls")
+      .select("*")
+      .eq("tenant_id", scratch.tenantId);
+    expect(calls).toHaveLength(1);
+
+    const call = calls![0];
+    expect(call.provider).toBe("vapi");
+    expect(call.provider_call_id).toBe(callId);
+    expect(call.outcome).toBe("inquiry_captured");
+    expect(call.caller_name).toBe("Adnan");
+    expect(call.caller_phone).toBe("+13055550142");
+    expect(call.duration_seconds).toBe(137);
+
+    // The uuid-keyed outputs must land on named columns.
+    const analysis = call.analysis as Record<string, string>;
+    expect(analysis.destination).toBe("Bali");
+    expect(analysis.dates).toBe("Around December");
+    expect(analysis.party_size).toBe("about 20");
+    expect(analysis.occasion).toBe("Just a regular friends trip");
+    expect(analysis.notes).toBe("have some adventure activities");
+
+    // System rows are not conversation; the two spoken turns are.
+    const transcript = call.transcript as { speaker: string; text: string }[];
+    expect(transcript).toHaveLength(2);
+    expect(transcript[0].speaker).toBe("Agent");
+    expect(transcript[1].speaker).toBe("Adnan");
+
+    // A destination and dates make it a lead, and minutes are billed once.
+    const { count: leads } = await db
+      .from("leads")
+      .select("id", { count: "exact", head: true })
+      .eq("tenant_id", scratch.tenantId);
+    expect(leads).toBe(1);
 
     await scratch.cleanup();
   });

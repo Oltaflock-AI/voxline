@@ -1,0 +1,27 @@
+-- ============================================================================
+-- Vapi — a third voice provider.
+-- ============================================================================
+--
+-- `voice_provider` was generalised from Retell to Retell-or-Sarvam in
+-- 20260829130000. Adding a third is now one enum value, because everything
+-- downstream already keys off `provider` + `provider_agent_id` rather than
+-- anything Retell-specific: the unique index on (provider, provider_agent_id)
+-- lets two providers hand out the same id without collision, and calls are
+-- deduplicated on (provider, provider_call_id) the same way.
+--
+-- THIS MIGRATION ONLY ADDS THE VALUE. It deliberately does not insert, update
+-- or select anything using 'vapi'. Postgres allows `ALTER TYPE ... ADD VALUE`
+-- inside a transaction (since 12), but the new label cannot be USED in that
+-- same transaction, and the CLI wraps each migration file in one. A single
+-- file that adds the value and then references it fails with
+--   ERROR: unsafe use of new value "vapi" of enum type voice_provider
+-- which reads like a permissions problem and is not. Anything that needs to
+-- write a 'vapi' row belongs in a later migration or in application code.
+--
+-- `if not exists` keeps this re-runnable: `supabase db push` against a
+-- database that already has the value should be a no-op, not a failure. That
+-- matters more than usual here, because Voxline now has TWO cloud databases
+-- (production and preview) and migrations are applied to each by hand.
+-- ============================================================================
+
+alter type voice_provider add value if not exists 'vapi';

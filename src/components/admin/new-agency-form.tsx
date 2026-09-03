@@ -170,6 +170,7 @@ export function NewAgencyForm({
           <select className="input" id="ag-provider" name="provider" defaultValue="sarvam">
             <option value="sarvam">Sarvam</option>
             <option value="retell">Retell AI</option>
+            <option value="vapi">Vapi</option>
           </select>
         </div>
 

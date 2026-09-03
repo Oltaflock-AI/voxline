@@ -666,7 +666,7 @@ export type Database = {
       membership_role: "owner" | "member"
       plan_name: "starter" | "growth" | "scale"
       tenant_status: "active" | "paused" | "churned"
-      voice_provider: "retell" | "sarvam"
+      voice_provider: "retell" | "sarvam" | "vapi"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -817,7 +817,7 @@ export const Constants = {
       membership_role: ["owner", "member"],
       plan_name: ["starter", "growth", "scale"],
       tenant_status: ["active", "paused", "churned"],
-      voice_provider: ["retell", "sarvam"],
+      voice_provider: ["retell", "sarvam", "vapi"],
     },
   },
 } as const

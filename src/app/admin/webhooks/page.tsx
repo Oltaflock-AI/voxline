@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { CopyField } from "@/components/admin/copy-field";
+import type { VoiceProvider } from "@/lib/ingest";
 import { getAppUrl } from "@/lib/app-url";
 
 /**
@@ -10,6 +11,34 @@ import { getAppUrl } from "@/lib/app-url";
  * which is why they are on their own page behind a warning rather than sitting
  * in the middle of the agency list where a screen-share would catch them.
  */
+/**
+ * The URL a given provider should post to, or null when the agent is not ready
+ * to receive one.
+ *
+ * A switch over the enum rather than a chain of ternaries, so adding a fourth
+ * provider is a compile error here instead of silently falling through to
+ * Retell's URL — which is what the previous `provider === "sarvam" ? … : retell`
+ * would have done for Vapi, handing out a real-looking URL for the wrong route.
+ *
+ * Retell authenticates by signature, so one URL serves every agent. Sarvam and
+ * Vapi authenticate by an unguessable per-agent token in the path, so each
+ * agent gets its own and an agent without a token has no reachable URL yet.
+ */
+function webhookUrlFor(
+  appUrl: string,
+  provider: VoiceProvider,
+  token: string | null
+): string | null {
+  switch (provider) {
+    case "retell":
+      return `${appUrl}/api/webhooks/retell`;
+    case "sarvam":
+      return token ? `${appUrl}/api/webhooks/sarvam/${token}` : null;
+    case "vapi":
+      return token ? `${appUrl}/api/webhooks/vapi/${token}` : null;
+  }
+}
+
 export default async function AdminWebhooksPage() {
   const admin = createAdminClient();
   const appUrl = getAppUrl();
@@ -34,21 +63,17 @@ export default async function AdminWebhooksPage() {
           <path d="M12 8v5M12 16.5v.01" />
         </svg>
         <p>
-          <b>Sarvam URLs contain a secret.</b> Sarvam does not sign its webhooks,
-          so the token in the path is the only thing proving a request really
-          came from them. Treat these like passwords. Do not paste them into
-          tickets, and do not leave this page open on a shared screen.
+          <b>Sarvam and Vapi URLs contain a secret.</b> Neither signs its
+          webhooks the way Retell does, so the token in the path is the only
+          thing proving a request really came from them. Treat these like
+          passwords. Do not paste them into tickets, and do not leave this page
+          open on a shared screen.
         </p>
       </div>
 
       <div className="card card-pad">
         {(agents ?? []).map((a) => {
-          const url =
-            a.provider === "sarvam"
-              ? a.webhook_token
-                ? `${appUrl}/api/webhooks/sarvam/${a.webhook_token}`
-                : null
-              : `${appUrl}/api/webhooks/retell`;
+          const url = webhookUrlFor(appUrl, a.provider, a.webhook_token);
 
           return (
             <div className="admin-webhook" key={a.id}>
@@ -63,8 +88,8 @@ export default async function AdminWebhooksPage() {
                 <CopyField value={url} label={`Webhook URL for ${a.tenants?.name ?? "agency"}`} />
               ) : (
                 <p className="admin-warn-text">
-                  No webhook token on this agent, so Sarvam has nowhere to send
-                  its calls. Re-save the agent to generate one.
+                  No webhook token on this agent, so {a.provider} has nowhere to
+                  send its calls. Re-save the agent to generate one.
                 </p>
               )}
             </div>

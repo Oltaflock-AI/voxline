@@ -16,8 +16,15 @@ import { ScorePanel } from "@/components/call/score-panel";
 import { Transcript } from "@/components/call/transcript";
 import { TripBrief } from "@/components/call/trip-brief";
 import type { RecordingStatus } from "@/lib/recording-retry";
+import type { VoiceProvider } from "@/lib/ingest";
 
-const PROVIDER_LABELS = { sarvam: "Sarvam", retell: "Retell AI" } as const;
+/** Keyed by the `voice_provider` enum, so adding a provider is a type error
+ *  here until this is updated. That is the point. */
+const PROVIDER_LABELS: Record<VoiceProvider, string> = {
+  sarvam: "Sarvam",
+  retell: "Retell AI",
+  vapi: "Vapi",
+};
 
 export default async function CallDetailPage(
   props: PageProps<"/app/[tenant]/calls/[callId]">
