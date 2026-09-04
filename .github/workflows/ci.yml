@@ -17,6 +17,12 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run lint
+
+      # Next 16 generates the PageProps / LayoutProps / RouteContext globals
+      # into .next/types. On a fresh checkout they do not exist yet, so tsc
+      # has to run after typegen or every typed route fails to compile.
+      - run: npx next typegen
+
       - run: npx tsc --noEmit
       - run: npm run build
         env:
