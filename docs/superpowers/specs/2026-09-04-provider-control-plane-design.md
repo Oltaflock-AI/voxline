@@ -52,7 +52,7 @@ campaigns, cohorts, instant outbound, analytics and BYOK. Probing for
 | author / update agent | API | API | console only |
 | publish | API | API | `PATCH /deployments/{id}/status` |
 | knowledge base | API | API | console only |
-| purchase number | — | — | no API; Twilio supplies |
+| purchase number | — | — | console (India); Twilio for US/CA |
 | attach number | API | API | deployment `connection_configs` |
 | set post-call webhook | API | API | deployment `webhook_config.url` |
 | outbound call | API | API | `POST /outbounds` |
@@ -155,15 +155,26 @@ through the service role from admin server actions.
 
 ### Telephony
 
-Twilio is the number supplier for both markets. Not on price — Telnyx is
-cheaper on DIDs and per-minute SIP — but because Retell and Vapi both import a
-Twilio number through an API call, whereas Telnyx means configuring a SIP trunk
-by hand. At current volume the price delta is negligible and the integration
-cost is not. `phone_numbers.supplier` keeps Telnyx a later swap behind the same
-interface.
+Two suppliers, split by market (Khush, 2026-09-05):
 
-Sarvam takes a Twilio number as bring-your-own telephony via
-`connection_configs`.
+- **India — Sarvam-rented numbers.** Sarvam has no number-provisioning API
+  (probed 2026-09-04: `phone-numbers` and `numbers` both 404), so Indian DIDs
+  are rented in the Sarvam console and attached to a deployment there. Voxline
+  records them (`phone_numbers.supplier = 'sarvam'`) by reading the deployment
+  back; it does not purchase them. Sarthak's agent runs this way today.
+- **US/Canada — Twilio.** Bought through the Twilio API from Voxline
+  (`supplier = 'twilio'`). Retell and Vapi both import a Twilio number through
+  an API call, whereas Telnyx means configuring a SIP trunk by hand; at current
+  volume the per-minute price delta is negligible and the integration cost is
+  not. `phone_numbers.supplier` keeps Telnyx a later swap behind the same
+  interface.
+
+A Sarvam agent serving US callers would take a Twilio number as
+bring-your-own telephony via `connection_configs`; nothing does that today.
+
+Voices follow the same split: Sarvam agents use Sarvam's own Bulbul voices —
+there is no voice API (`voices` → 404) and ElevenLabs voices cannot be used
+there. ElevenLabs voice ids apply to Retell and Vapi agents only.
 
 ## Build order
 
