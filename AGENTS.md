@@ -25,7 +25,7 @@ When spec and code disagree, spec wins — flag the mismatch rather than silentl
 - Next.js 16 (App Router, TypeScript strict) — README may still say 15; package.json is authoritative
 - Tailwind CSS v4 — Deep Ink design tokens mapped in `src/app/globals.css`; use tokens, no hard-coded colors
 - Supabase (Postgres + RLS, Auth, Storage) via `@supabase/ssr`
-- Retell AI (voice runtime) · Stripe Billing · Resend · Sentry · Vercel
+- Retell AI · Sarvam · Vapi (voice runtimes) · Dodo Payments (billing — NOT Stripe: Stripe needs a US entity; `docs/Voxline-Spec.md` still says Stripe and is out of date on this point) · Resend · Sentry · Vercel
 
 ## Commands
 

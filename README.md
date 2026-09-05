@@ -12,7 +12,7 @@ A product of Oltaflock AI LLP.
 
 ## Stack
 
-Next.js 15 (App Router, TypeScript strict) · Tailwind CSS v4 (Deep Ink tokens mapped in `src/app/globals.css`) · Supabase (Postgres + RLS, Auth, Storage) · Retell AI · Stripe Billing · Resend · Vercel · Sentry.
+Next.js 15 (App Router, TypeScript strict) · Tailwind CSS v4 (Deep Ink tokens mapped in `src/app/globals.css`) · Supabase (Postgres + RLS, Auth, Storage) · Retell AI · Sarvam · Vapi · Dodo Payments · Resend · Vercel · Sentry.
 
 ## Setup
 
