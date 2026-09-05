@@ -76,7 +76,13 @@ export function ConnectAgent({ tenantId }: { tenantId: string }) {
           className="input"
           id="ca-provider"
           value={provider}
-          onChange={(e) => setProvider(e.target.value as VoiceProvider)}
+          // Reset here, not in the effect above: react-hooks/set-state-in-effect
+          // forbids synchronous setState in an effect body, but event handlers
+          // are exempt, and this is the only place a provider switch is known.
+          onChange={(e) => {
+            setProvider(e.target.value as VoiceProvider);
+            setList(null);
+          }}
         >
           {PROVIDER_ORDER.map((p) => (
             <option key={p} value={p}>
@@ -92,20 +98,20 @@ export function ConnectAgent({ tenantId }: { tenantId: string }) {
         <>
           {loading && <p className="admin-muted">Loading deployments from Sarvam…</p>}
 
-          {list?.error && (
+          {!loading && list?.error && (
             <div className="auth-err show" role="alert">
               {list.error}
             </div>
           )}
 
-          {list && !list.error && list.deployments.length === 0 && (
+          {!loading && list && !list.error && list.deployments.length === 0 && (
             <div className="empty">
               <b>No deployments in the Sarvam workspace</b>
               <p>Create and deploy the agent in Sarvam&rsquo;s console first, then come back.</p>
             </div>
           )}
 
-          {list && list.deployments.length > 0 && (
+          {!loading && list && list.deployments.length > 0 && (
             <ul className="admin-members">
               {list.deployments.map((d) => (
                 <DeploymentRow key={d.deployment_id} d={d} tenantId={tenantId} action={action} />
