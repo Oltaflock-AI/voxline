@@ -50,21 +50,68 @@ each other and never sync.
 
 | Environment | Database | Holds |
 |---|---|---|
-| Local (`npm run dev`, tests) | Docker, `supabase start` | migrations + `seed.sql` |
+| Local (`npm run dev`, tests) | Docker, `supabase start -x vector,logflare,studio` | migrations + `seed.sql` |
 | Preview (Vercel) | `eezdyseztlfltmabrely` — project `voxline-preview`, Adnan's personal Supabase org | migrations + `seed.sql` |
-| Production (Vercel) | `brodbnufqvtpifhrpama` — Khush's Supabase org | migrations only |
+| Production (Vercel) | `brodbnufqvtpifhrpama` — project `Voxline`, org `ffivubcaxahyxfacedpx` | migrations only |
+
+The local stack excludes three services deliberately. `vector` bind-mounts the
+Docker socket at a path a non-Docker-Desktop runtime does not provide, and
+`studio` is only the web dashboard — both fail the whole `supabase start` for
+something no test needs. On a Mac without Docker Desktop, `colima start` is the
+runtime that works; Docker Desktop's own image pulls stalled indefinitely here
+on 2026-09-05, and `~/.docker/config.json` may need `credsStore` removed.
+
+Two env files, and the order matters: `.env.development.local` holds the LOCAL
+Supabase credentials and Next reads it first, while `.env.local` is written by
+`vercel env pull` and points at PRODUCTION. The Vercel CLI writes values as
+`""value""`, which the Supabase CLI refuses to parse — if `supabase status`
+complains about `.env.local`, strip the doubled quotes and the multi-line
+`VERCEL_OIDC_TOKEN`.
 
 **A new migration has to be pushed to BOTH cloud databases.** Nothing does this
 for you, and a schema change that lands on one leaves the other broken at
-runtime rather than at build time. Push with `--db-url`; do not `supabase link`,
-because production is in an org most of us cannot see:
+runtime rather than at build time — a preview deploy whose database is missing
+a column 500s on the page that selects it, with nothing failing at build.
+
+Each database is reachable by whoever is in its org, and the two orgs do not
+overlap: production is `ffivubcaxahyxfacedpx` (Khush), preview is Adnan's
+personal org. Being able to push to one says nothing about the other. Run
+`supabase projects list` first — a ref you cannot see is a ref whose password
+you cannot read from the dashboard either, and the fix is an org invite, not a
+cleverer command.
+
+Link, then push. Take the password through `SUPABASE_DB_PASSWORD` rather than
+building a `--db-url`: a password containing `@`, `/`, `#` or `:` breaks URL
+parsing, and the resulting error is indistinguishable from a wrong password.
 
 ```bash
-supabase db push --db-url "postgresql://postgres:PASSWORD@db.<ref>.supabase.co:5432/postgres"
+read -rs "?DB password: " SUPABASE_DB_PASSWORD && echo   # zsh; bash: read -rsp "DB password: "
+export SUPABASE_DB_PASSWORD
+supabase link --project-ref <ref>
+supabase db push
+supabase unlink        # ALWAYS. See below.
 ```
 
-Production's password comes from Khush. Preview's is in `.env.preview-db`
-(gitignored by the `.env*` rule, like every other env file here).
+Passwords are in each project's dashboard under Settings → Database. Neither is
+stored in this repo; `.env.preview-db` is referenced in older notes but does not
+exist.
+
+**`supabase unlink` when you are done.** Linking writes
+`supabase/.temp/project-ref`, and every later `supabase` command in that
+checkout then aims at the linked project — including `db reset`, which is the
+one command that would turn a mistake into a security incident (see below). The
+link is a loaded gun left on the table for whoever opens the repo next.
+
+Verify the push landed rather than trusting "Finished supabase db push" — ask
+the database, using the service-role key already in `.env.local`:
+
+```bash
+set -a && . ./.env.local && set +a
+curl -s -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+  "$NEXT_PUBLIC_SUPABASE_URL/rest/v1/<table>?select=<new_column>&limit=1"
+```
+
+A missing column comes back as PostgREST error `42703`, which is unambiguous.
 
 **`seed.sql` must never reach production.** It inserts straight into
 `auth.users` and `platform_admins`, so it creates working logins including a
