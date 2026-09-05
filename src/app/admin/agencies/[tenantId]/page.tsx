@@ -87,9 +87,23 @@ export default async function AdminAgencyPage(
               name="status"
               value={agent.status === "live" ? "paused" : "live"}
             />
-            <button className={agent.status === "live" ? "btn-ghost sm" : "btn sm"} type="submit">
-              {agent.status === "live" ? "Pause agent" : "Resume agent"}
-            </button>
+            {(() => {
+              const canGoLive = !(
+                agent.provider === "sarvam" && !agent.webhook_verified_at
+              );
+              const disabled = agent.status !== "live" && !canGoLive;
+              return (
+                <button
+                  className={agent.status === "live" ? "btn-ghost sm" : "btn sm"}
+                  type="submit"
+                  disabled={disabled}
+                  aria-disabled={disabled}
+                  title={disabled ? "Verify the Sarvam webhook first" : undefined}
+                >
+                  {agent.status === "live" ? "Pause agent" : "Resume agent"}
+                </button>
+              );
+            })()}
           </form>
         )}
       </div>

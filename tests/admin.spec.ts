@@ -158,4 +158,14 @@ test.describe("admin console works", () => {
     await page.goto("/admin/agencies/11111111-1111-1111-1111-111111111111");
     await expect(page.getByText("Webhook not verified")).toBeVisible();
   });
+
+  test("go-live gate: an unverified Sarvam agent cannot be silently resumed", async ({ page }) => {
+    // Blue Harbor's seeded agent is `live` (seed.sql), never verified. Since
+    // it is already live the button reads "Pause agent" and pausing needs no
+    // gate, so the observable signal is the Verify webhook affordance from
+    // the unverified path, not a disabled Resume button.
+    await page.goto("/admin/agencies/11111111-1111-1111-1111-111111111111");
+    await expect(page.getByRole("button", { name: "Pause agent" })).toBeEnabled();
+    await expect(page.getByRole("button", { name: "Verify webhook" })).toBeVisible();
+  });
 });

@@ -58,6 +58,7 @@ export async function setAgentStatus(formData: FormData) {
   // exists to prevent. Sarvam only for now: the existing Vapi agent was wired
   // by hand before webhook_verified_at existed and must keep working.
   if (status === "live" && agent.provider === "sarvam" && !agent.webhook_verified_at) {
+    revalidatePath("/admin");
     return;
   }
 
