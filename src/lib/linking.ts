@@ -90,7 +90,6 @@ export async function linkSarvamDeployment(
     provider_agent_id: deployment.app_id,
     provider_deployment_id: deployment.deployment_id,
     phone_number: deployment.phone_numbers[0] ?? null,
-    last_synced_at: new Date().toISOString(),
   };
 
   const { data: existing } = await admin

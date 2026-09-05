@@ -186,11 +186,12 @@ test.describe("linkSarvamDeployment", () => {
     // The row exists (so the admin can see what happened) but is not verified.
     const { data: row } = await admin()
       .from("voice_agents")
-      .select("linked_at, webhook_verified_at")
+      .select("linked_at, webhook_verified_at, last_synced_at")
       .eq("tenant_id", tenantId)
       .single();
     expect(row?.linked_at).toBeNull();
     expect(row?.webhook_verified_at).toBeNull();
+    expect(row?.last_synced_at).toBeNull();
   });
 
   test("an unknown deployment is a clean error, not a throw", async () => {
