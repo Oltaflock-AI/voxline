@@ -22,6 +22,11 @@ const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const APP_URL = "https://vox.test";
 const ADMIN_USER = "dddddddd-dddd-dddd-dddd-dddddddddddd"; // admin@voxline.test in seed.sql
 
+// The database persists between runs, and voice_agents has unique indexes on
+// (provider, provider_agent_id) and (provider, provider_deployment_id) plus an
+// ownership check — fixed fixture ids would make the previous run's rows fail this one.
+const RUN = Date.now().toString(36);
+
 const admin = () =>
   createClient<Database>(SUPABASE_URL, SERVICE_KEY, {
     auth: { persistSession: false },
@@ -29,10 +34,10 @@ const admin = () =>
 
 function deployment(over: Partial<SarvamDeployment> = {}): SarvamDeployment {
   return {
-    deployment_id: "dep-1",
+    deployment_id: `dep-1-${RUN}`,
     name: "Test Deployment",
     status: "active",
-    app_id: "app-1",
+    app_id: `app-1-${RUN}`,
     app_version: 3,
     phone_numbers: ["+917900000001"],
     channel_direction: "inbound_outbound",
@@ -82,7 +87,7 @@ test.describe("linkSarvamDeployment", () => {
     const sarvam = fakeSarvam(deployment());
 
     const result = await linkSarvamDeployment(
-      { tenantId, deploymentId: "dep-1", actorUserId: ADMIN_USER, appUrl: APP_URL },
+      { tenantId, deploymentId: `dep-1-${RUN}`, actorUserId: ADMIN_USER, appUrl: APP_URL },
       { client: sarvam.client, admin: admin() }
     );
 
@@ -97,8 +102,8 @@ test.describe("linkSarvamDeployment", () => {
 
     expect(row?.tenant_id).toBe(tenantId);
     expect(row?.provider).toBe("sarvam");
-    expect(row?.provider_agent_id).toBe("app-1");          // app_id, not deployment_id
-    expect(row?.provider_deployment_id).toBe("dep-1");
+    expect(row?.provider_agent_id).toBe(`app-1-${RUN}`);          // app_id, not deployment_id
+    expect(row?.provider_deployment_id).toBe(`dep-1-${RUN}`);
     expect(row?.phone_number).toBe("+917900000001");
     expect(row?.name).toBe("Test Deployment");
     expect(row?.status).toBe("paused");                    // admin resumes explicitly
@@ -118,8 +123,8 @@ test.describe("linkSarvamDeployment", () => {
       .eq("action", "voice_agent.linked")
       .single();
     expect(audit?.payload).toMatchObject({
-      deployment_id: "dep-1",
-      app_id: "app-1",
+      deployment_id: `dep-1-${RUN}`,
+      app_id: `app-1-${RUN}`,
       app_version: 3,
     });
     expect(JSON.stringify(audit?.payload)).not.toContain(row!.webhook_token!);
@@ -127,9 +132,9 @@ test.describe("linkSarvamDeployment", () => {
 
   test("re-linking the same tenant updates the existing row instead of adding one", async () => {
     const tenantId = await throwawayTenant("again");
-    const sarvam = fakeSarvam(deployment({ app_id: "app-again", deployment_id: "dep-again" }));
+    const sarvam = fakeSarvam(deployment({ app_id: `app-again-${RUN}`, deployment_id: `dep-again-${RUN}` }));
     const deps = { client: sarvam.client, admin: admin() };
-    const input = { tenantId, deploymentId: "dep-again", actorUserId: ADMIN_USER, appUrl: APP_URL };
+    const input = { tenantId, deploymentId: `dep-again-${RUN}`, actorUserId: ADMIN_USER, appUrl: APP_URL };
 
     const first = await linkSarvamDeployment(input, deps);
     const second = await linkSarvamDeployment(input, deps);
@@ -145,15 +150,15 @@ test.describe("linkSarvamDeployment", () => {
   test("refuses to link an app_id another agency already owns", async () => {
     const a = await throwawayTenant("owner");
     const b = await throwawayTenant("thief");
-    const sarvam = fakeSarvam(deployment({ app_id: "app-shared", deployment_id: "dep-shared" }));
+    const sarvam = fakeSarvam(deployment({ app_id: `app-shared-${RUN}`, deployment_id: `dep-shared-${RUN}` }));
     const deps = { client: sarvam.client, admin: admin() };
 
     const first = await linkSarvamDeployment(
-      { tenantId: a, deploymentId: "dep-shared", actorUserId: ADMIN_USER, appUrl: APP_URL },
+      { tenantId: a, deploymentId: `dep-shared-${RUN}`, actorUserId: ADMIN_USER, appUrl: APP_URL },
       deps
     );
     const second = await linkSarvamDeployment(
-      { tenantId: b, deploymentId: "dep-shared", actorUserId: ADMIN_USER, appUrl: APP_URL },
+      { tenantId: b, deploymentId: `dep-shared-${RUN}`, actorUserId: ADMIN_USER, appUrl: APP_URL },
       deps
     );
 
@@ -169,12 +174,12 @@ test.describe("linkSarvamDeployment", () => {
   test("does not mark verified when Sarvam reports a different URL after the write", async () => {
     const tenantId = await throwawayTenant("unverified");
     const sarvam = fakeSarvam(
-      deployment({ app_id: "app-unv", deployment_id: "dep-unv" }),
+      deployment({ app_id: `app-unv-${RUN}`, deployment_id: `dep-unv-${RUN}` }),
       { honourWrites: false }
     );
 
     const result = await linkSarvamDeployment(
-      { tenantId, deploymentId: "dep-unv", actorUserId: ADMIN_USER, appUrl: APP_URL },
+      { tenantId, deploymentId: `dep-unv-${RUN}`, actorUserId: ADMIN_USER, appUrl: APP_URL },
       { client: sarvam.client, admin: admin() }
     );
 
