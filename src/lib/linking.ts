@@ -60,7 +60,7 @@ export async function linkSarvamDeployment(
     if (e instanceof SarvamClientError && e.status === 404) {
       return { ok: false, error: `Deployment ${input.deploymentId} was not found in Sarvam.` };
     }
-    console.error("[link] sarvam getDeployment failed", e);
+    console.error("[link] sarvam getDeployment failed", e instanceof Error ? e.message : e);
     return { ok: false, error: "Sarvam could not be reached. Try again in a moment." };
   }
 
@@ -108,7 +108,7 @@ export async function linkSarvamDeployment(
     .single();
 
   if (writeError || !agent?.webhook_token) {
-    console.error("[link] voice_agents write failed", writeError);
+    console.error("[link] voice_agents write failed", writeError?.message);
     return { ok: false, error: "The agent record could not be saved." };
   }
 
@@ -128,10 +128,14 @@ export async function linkSarvamDeployment(
     };
   }
 
+  const sameNumbers = (a: string[], b: string[]) =>
+    a.length === b.length &&
+    [...a].sort().every((n, i) => n === [...b].sort()[i]);
+
   const verified =
     after.webhook_url === url &&
     after.app_version === deployment.app_version &&
-    JSON.stringify(after.phone_numbers) === JSON.stringify(deployment.phone_numbers);
+    sameNumbers(after.phone_numbers, deployment.phone_numbers);
 
   if (!verified) {
     // Do not say what URL came back: it may be another tenant's token.
@@ -148,13 +152,21 @@ export async function linkSarvamDeployment(
 
   // 4. Record it.
   const now = new Date().toISOString();
-  await admin
+  const { error: stampError } = await admin
     .from("voice_agents")
     .update({ linked_at: now, webhook_verified_at: now, last_synced_at: now })
     .eq("id", agent.id);
 
+  if (stampError) {
+    console.error("[link] voice_agents timestamp update failed", stampError.message);
+    return {
+      ok: false,
+      error: "The webhook was confirmed but the agent record could not be updated. Try again.",
+    };
+  }
+
   // 5. Audit. deployment_id, app_id and version are identifiers, not secrets.
-  await admin.from("audit_log").insert({
+  const { error: auditError } = await admin.from("audit_log").insert({
     tenant_id: input.tenantId,
     actor_user_id: input.actorUserId,
     action: "voice_agent.linked",
@@ -167,6 +179,9 @@ export async function linkSarvamDeployment(
       phone_numbers: deployment.phone_numbers,
     },
   });
+  if (auditError) {
+    console.error("[link] audit_log insert failed", auditError.message);
+  }
 
   return { ok: true, agentId: agent.id };
 }
