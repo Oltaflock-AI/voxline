@@ -1,5 +1,5 @@
 import type { CallOutcome } from "@/lib/outcomes";
-import type { CallAnalysis } from "@/lib/calls";
+import type { AgentVertical, CallAnalysis } from "@/lib/calls";
 import { BAND_META, bandFor, explainScore } from "@/lib/score";
 
 /**
@@ -16,11 +16,13 @@ export function ScorePanel({
   outcome,
   analysis,
   durationSeconds,
+  vertical,
 }: {
   score: number | null;
   outcome: CallOutcome | null;
   analysis: CallAnalysis;
   durationSeconds: number;
+  vertical: AgentVertical;
 }) {
   const band = bandFor(score);
   const meta = BAND_META[band];
@@ -28,6 +30,7 @@ export function ScorePanel({
     outcome,
     analysis,
     duration_seconds: durationSeconds,
+    vertical,
   });
 
   return (

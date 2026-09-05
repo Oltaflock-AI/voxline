@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { requireTenant } from "@/lib/tenant";
 import { OUTCOME_META } from "@/lib/outcomes";
 import {
+  BRIEF_TITLE,
   formatCallDate,
   formatDuration,
   hasBrief,
@@ -24,6 +25,7 @@ const PROVIDER_LABELS: Record<VoiceProvider, string> = {
   sarvam: "Sarvam",
   retell: "Retell AI",
   vapi: "Vapi",
+  elevenlabs: "ElevenLabs",
 };
 
 export default async function CallDetailPage(
@@ -55,6 +57,10 @@ export default async function CallDetailPage(
   const analysis = parseAnalysis(call.analysis);
   const turns = parseTranscript(call.transcript);
   const agentName = call.voice_agents?.name ?? "Voice agent";
+  // Snapshotted on the row at ingest, not read back off the agent — a call
+  // keeps the vertical it was actually scored under.
+  const vertical = call.vertical;
+  const briefTitle = BRIEF_TITLE[vertical];
 
   return (
     <section className="panel on call-detail">
@@ -99,6 +105,7 @@ export default async function CallDetailPage(
         outcome={call.outcome}
         analysis={analysis}
         durationSeconds={call.duration_seconds}
+        vertical={vertical}
       />
 
       <div className="call-detail-grid">
@@ -135,19 +142,20 @@ export default async function CallDetailPage(
 
         <aside className="call-detail-aside">
           <section className="call-detail-brief" aria-labelledby="brief-title">
-            <h3 id="brief-title" className="sr-only">Trip brief</h3>
-            {hasBrief(analysis) ? (
+            <h3 id="brief-title" className="sr-only">{briefTitle}</h3>
+            {hasBrief(analysis, vertical) ? (
               <TripBrief
                 analysis={analysis}
+                vertical={vertical}
                 leadHref={
                   lead ? `/app/${tenant.slug}/pipeline?call=${call.id}` : undefined
                 }
               />
             ) : (
               <div className="card detail-empty">
-                <span className="lab">Trip brief</span>
-                <b>No trip details captured</b>
-                <p>This call did not produce any trip details.</p>
+                <span className="lab">{briefTitle}</span>
+                <b>No details captured</b>
+                <p>This call did not produce any requirements.</p>
               </div>
             )}
           </section>

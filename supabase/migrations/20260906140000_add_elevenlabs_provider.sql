@@ -1,0 +1,25 @@
+-- ============================================================================
+-- ElevenLabs — a fourth voice provider.
+-- ============================================================================
+--
+-- Rise & Shine Travels runs on an ElevenLabs conversational agent today and
+-- Sarthak Singapore runs three of them, so this is the provider two live
+-- clients are already on. Voxline has adapters for Retell, Sarvam and Vapi;
+-- this is the missing one. Brief task 3.
+--
+-- THIS MIGRATION ONLY ADDS THE VALUE, for the reason recorded at length in
+-- 20260903120000_add_vapi_provider.sql: Postgres allows `ALTER TYPE ... ADD
+-- VALUE` inside a transaction, but the new label cannot be USED in that same
+-- transaction, and the CLI wraps each migration file in one. Anything that
+-- writes an 'elevenlabs' row belongs in a later migration or in application
+-- code.
+--
+-- Nothing else in the schema is provider-specific: calls deduplicate on
+-- (provider, provider_call_id) and agents map on (provider, provider_agent_id),
+-- so a fourth provider needs no new columns for ingestion itself. The columns
+-- it DOES need — a credential reference, because ElevenLabs credentials are
+-- per workspace and our two clients are in different workspaces — are the next
+-- migration.
+-- ============================================================================
+
+alter type voice_provider add value if not exists 'elevenlabs';

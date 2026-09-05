@@ -36,6 +36,8 @@ function webhookUrlFor(
       return token ? `${appUrl}/api/webhooks/sarvam/${token}` : null;
     case "vapi":
       return token ? `${appUrl}/api/webhooks/vapi/${token}` : null;
+    case "elevenlabs":
+      return token ? `${appUrl}/api/webhooks/elevenlabs/${token}` : null;
   }
 }
 
@@ -63,11 +65,13 @@ export default async function AdminWebhooksPage() {
           <path d="M12 8v5M12 16.5v.01" />
         </svg>
         <p>
-          <b>Sarvam and Vapi URLs contain a secret.</b> Neither signs its
-          webhooks the way Retell does, so the token in the path is the only
-          thing proving a request really came from them. Treat these like
-          passwords. Do not paste them into tickets, and do not leave this page
-          open on a shared screen.
+          <b>Every URL except Retell&rsquo;s contains a secret.</b> Sarvam and
+          Vapi do not sign their webhooks at all, so the token in the path is
+          the only thing proving a request came from them. ElevenLabs does sign,
+          and Voxline checks that signature — but the token still identifies
+          which agency the call belongs to. Treat these like passwords. Do not
+          paste them into tickets, and do not leave this page open on a shared
+          screen.
         </p>
       </div>
 

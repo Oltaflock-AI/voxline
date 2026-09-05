@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { OUTCOME_META } from "@/lib/outcomes";
 import {
+  BRIEF_FIELDS,
   formatDuration,
   formatWhen,
   parseAnalysis,
@@ -18,13 +19,17 @@ import { ScoreBadge } from "./score-badge";
  * brief rather than prose: "Kerala backwaters · Late November · 4 travellers"
  * tells an agent more in three words than a generated sentence does, and it
  * costs nothing — the fields are already on the row.
+ *
+ * Reads BRIEF_FIELDS rather than a hardcoded list, so a real-estate call shows
+ * "Investment · Commercial · 1200 sq ft" instead of an empty line. The vertical
+ * is on the row, so this costs no extra query.
  */
 function briefLine(call: CallRowData): string | null {
   const a = parseAnalysis(call.analysis);
-  const parts = [a.destination, a.dates, a.party_size, a.budget].filter(
-    (v): v is string => typeof v === "string" && v.trim() !== ""
-  );
-  return parts.length > 0 ? parts.join(" · ") : null;
+  const parts = BRIEF_FIELDS[call.vertical]
+    .map(([key]) => a[key])
+    .filter((v): v is string => typeof v === "string" && v.trim() !== "");
+  return parts.length > 0 ? parts.slice(0, 4).join(" · ") : null;
 }
 
 function CallRow({

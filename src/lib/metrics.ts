@@ -193,7 +193,14 @@ export async function getOverviewMetrics(
   }
 
   // --- outcomes ---
-  const outcomeCounts = OUTCOME_ORDER.map((outcome) => ({
+  //
+  // The enum covers both verticals, so a travel agency would otherwise see
+  // "Site visit booked 0 · 0%" and "Transferred 0 · 0%" on every Overview
+  // forever, and a real-estate one would see "Quote requested 0". Rows with no
+  // calls behind them are dropped — but only once something else has a count,
+  // so a brand-new agency still sees the full breakdown at zero rather than a
+  // blank panel.
+  const allOutcomes = OUTCOME_ORDER.map((outcome) => ({
     outcome,
     label: OUTCOME_META[outcome].label,
     color: OUTCOME_META[outcome].color,
@@ -202,6 +209,8 @@ export async function getOverviewMetrics(
       (r) => r.n
     ),
   }));
+  const withCalls = allOutcomes.filter((o) => o.n > 0);
+  const outcomeCounts = withCalls.length > 0 ? withCalls : allOutcomes;
 
   // --- KPI 1: calls handled ---
   const calls = sum(rows, (r) => r.n);
@@ -401,11 +410,17 @@ export async function getOverviewMetrics(
  * 1000 and disagreed with the sidebar count on the same screen.
  */
 export async function getOutcomeCounts(
-  tenantId: string
+  tenantId: string,
+  voiceAgentId?: string | null
 ): Promise<Record<string, number>> {
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("call_outcome_counts", {
     p_tenant_id: tenantId,
+    // Omitted rather than passed as null, because the generated Args type
+    // makes it optional (the SQL default supplies the null). The chips must be
+    // scoped the same way the list below them is, or one screen shows two
+    // different totals for the same thing.
+    ...(voiceAgentId ? { p_voice_agent_id: voiceAgentId } : {}),
   });
   if (error) throw error;
 

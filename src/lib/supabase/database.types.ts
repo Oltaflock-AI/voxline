@@ -161,6 +161,7 @@ export type Database = {
           started_at: string
           tenant_id: string
           transcript: Json
+          vertical: Database["public"]["Enums"]["agent_vertical"]
           voice_agent_id: string | null
         }
         Insert: {
@@ -184,6 +185,7 @@ export type Database = {
           started_at?: string
           tenant_id: string
           transcript?: Json
+          vertical?: Database["public"]["Enums"]["agent_vertical"]
           voice_agent_id?: string | null
         }
         Update: {
@@ -207,6 +209,7 @@ export type Database = {
           started_at?: string
           tenant_id?: string
           transcript?: Json
+          vertical?: Database["public"]["Enums"]["agent_vertical"]
           voice_agent_id?: string | null
         }
         Relationships: [
@@ -568,6 +571,7 @@ export type Database = {
           recording_retention_months: number
           status: Database["public"]["Enums"]["agent_status"]
           tenant_id: string
+          vertical: Database["public"]["Enums"]["agent_vertical"]
           voice_desc: string | null
           webhook_token: string | null
           webhook_verified_at: string | null
@@ -591,6 +595,7 @@ export type Database = {
           recording_retention_months?: number
           status?: Database["public"]["Enums"]["agent_status"]
           tenant_id: string
+          vertical?: Database["public"]["Enums"]["agent_vertical"]
           voice_desc?: string | null
           webhook_token?: string | null
           webhook_verified_at?: string | null
@@ -614,6 +619,7 @@ export type Database = {
           recording_retention_months?: number
           status?: Database["public"]["Enums"]["agent_status"]
           tenant_id?: string
+          vertical?: Database["public"]["Enums"]["agent_vertical"]
           voice_desc?: string | null
           webhook_token?: string | null
           webhook_verified_at?: string | null
@@ -639,7 +645,7 @@ export type Database = {
       }
       auth_tenant_ids: { Args: never; Returns: string[] }
       call_outcome_counts: {
-        Args: { p_tenant_id: string }
+        Args: { p_tenant_id: string; p_voice_agent_id?: string }
         Returns: {
           n: number
           outcome: Database["public"]["Enums"]["call_outcome"]
@@ -667,18 +673,21 @@ export type Database = {
         | "completed"
         | "cancelled"
       agent_status: "live" | "paused"
+      agent_vertical: "travel" | "real_estate"
       call_outcome:
         | "inquiry_captured"
         | "quote_requested"
         | "voicemail"
         | "not_a_fit"
+        | "site_visit_booked"
+        | "transferred_to_human"
       change_request_status: "open" | "done"
       invoice_status: "paid" | "open" | "void"
       lead_stage: "new_inquiry" | "quoted" | "booked" | "traveling"
       membership_role: "owner" | "member"
       plan_name: "starter" | "growth" | "scale"
       tenant_status: "active" | "paused" | "churned"
-      voice_provider: "retell" | "sarvam" | "vapi"
+      voice_provider: "retell" | "sarvam" | "vapi" | "elevenlabs"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -817,11 +826,14 @@ export const Constants = {
         "cancelled",
       ],
       agent_status: ["live", "paused"],
+      agent_vertical: ["travel", "real_estate"],
       call_outcome: [
         "inquiry_captured",
         "quote_requested",
         "voicemail",
         "not_a_fit",
+        "site_visit_booked",
+        "transferred_to_human",
       ],
       change_request_status: ["open", "done"],
       invoice_status: ["paid", "open", "void"],
@@ -829,7 +841,7 @@ export const Constants = {
       membership_role: ["owner", "member"],
       plan_name: ["starter", "growth", "scale"],
       tenant_status: ["active", "paused", "churned"],
-      voice_provider: ["retell", "sarvam", "vapi"],
+      voice_provider: ["retell", "sarvam", "vapi", "elevenlabs"],
     },
   },
 } as const

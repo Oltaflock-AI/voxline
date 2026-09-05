@@ -1,5 +1,5 @@
 import type { CallOutcome } from "@/lib/outcomes";
-import type { CallAnalysis } from "@/lib/calls";
+import { BRIEF_FIELDS, type AgentVertical, type CallAnalysis } from "@/lib/calls";
 
 /**
  * Lead score bands and the explanation behind them.
@@ -63,21 +63,56 @@ export function bandRange(band: LeadBand): { min: number; max: number } {
   return { min: 0, max: 59 };
 }
 
-const OUTCOME_POINTS: Record<CallOutcome, number> = {
-  quote_requested: 45,
-  inquiry_captured: 30,
-  voicemail: 5,
-  not_a_fit: 0,
+/**
+ * What each outcome is worth, per vertical.
+ *
+ * Keyed by vertical because the generated column is: the travel branch of
+ * 20260906090100_real_estate_vertical.sql has no arm for site_visit_booked, so
+ * it falls to `else 0` there while being the top score in real estate. A flat
+ * map cannot express that, and the panel would claim 45 points the database
+ * never gave.
+ *
+ * MIRRORS THE MIGRATION. If those CASE arms change, these numbers change in
+ * the same commit — the migration's header says so too.
+ */
+const OUTCOME_POINTS: Record<AgentVertical, Record<CallOutcome, number>> = {
+  travel: {
+    quote_requested: 45,
+    inquiry_captured: 30,
+    voicemail: 5,
+    not_a_fit: 0,
+    site_visit_booked: 0,
+    transferred_to_human: 0,
+  },
+  real_estate: {
+    site_visit_booked: 45,
+    transferred_to_human: 35,
+    quote_requested: 30,
+    inquiry_captured: 30,
+    voicemail: 5,
+    not_a_fit: 0,
+  },
 };
 
-/** The five brief fields the score counts, in the order the UI lists them. */
-const BRIEF_FIELDS: [keyof CallAnalysis, string][] = [
-  ["destination", "Destination"],
-  ["dates", "Dates"],
-  ["party_size", "Party size"],
-  ["budget", "Budget"],
-  ["occasion", "Occasion"],
-];
+/** How to describe what the caller did, per vertical. */
+const OUTCOME_DETAIL: Record<AgentVertical, Record<CallOutcome, string>> = {
+  travel: {
+    quote_requested: "Asked for a quote",
+    inquiry_captured: "Left a trip enquiry",
+    voicemail: "Reached voicemail",
+    not_a_fit: "Not a fit",
+    site_visit_booked: "Booked a visit — not scored for travel",
+    transferred_to_human: "Transferred — not scored for travel",
+  },
+  real_estate: {
+    site_visit_booked: "Booked a site visit",
+    transferred_to_human: "Asked for the team and was transferred",
+    quote_requested: "Asked about price",
+    inquiry_captured: "Left a property enquiry",
+    voicemail: "Reached voicemail",
+    not_a_fit: "Not a fit",
+  },
+};
 
 export type ScorePart = {
   label: string;
@@ -103,10 +138,12 @@ export function explainScore(call: {
   outcome: CallOutcome | null;
   analysis: CallAnalysis | null | undefined;
   duration_seconds: number | null;
+  vertical: AgentVertical;
 }): { parts: ScorePart[]; total: number } {
-  const outcomePoints = call.outcome ? OUTCOME_POINTS[call.outcome] : 0;
+  const vertical = call.vertical;
+  const outcomePoints = call.outcome ? OUTCOME_POINTS[vertical][call.outcome] : 0;
 
-  const captured = BRIEF_FIELDS.filter(([key]) => {
+  const captured = BRIEF_FIELDS[vertical].filter(([key]) => {
     const value = call.analysis?.[key];
     return typeof value === "string" && value.trim() !== "";
   });
@@ -120,17 +157,11 @@ export function explainScore(call: {
       points: outcomePoints,
       max: 45,
       detail: call.outcome
-        ? call.outcome === "quote_requested"
-          ? "Asked for a quote"
-          : call.outcome === "inquiry_captured"
-            ? "Left a trip enquiry"
-            : call.outcome === "voicemail"
-              ? "Reached voicemail"
-              : "Not a fit"
+        ? OUTCOME_DETAIL[vertical][call.outcome]
         : "No outcome recorded",
     },
     {
-      label: "Trip details captured",
+      label: vertical === "real_estate" ? "Requirements captured" : "Trip details captured",
       points: captured.length * 8,
       max: 40,
       detail:

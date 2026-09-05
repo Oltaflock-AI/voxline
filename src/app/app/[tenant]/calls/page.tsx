@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { requireTenant } from "@/lib/tenant";
 import { CallList } from "@/components/call/call-list";
 import { CallSearch } from "@/components/call/call-search";
-import { CALL_FILTERS } from "@/lib/outcomes";
+import { callFilters } from "@/lib/outcomes";
 import { getOutcomeCounts } from "@/lib/metrics";
 import {
   BAND_META,
@@ -32,10 +32,37 @@ export default async function CallsPage(
 ) {
   const { tenant: slug } = await props.params;
   const { tenant } = await requireTenant(slug);
-  const { filter, page, q, band } = await props.searchParams;
+  const { filter, page, q, band, agent } = await props.searchParams;
 
-  const activeFilter =
-    CALL_FILTERS.find((f) => f.key === filter)?.key ?? "all";
+  const supabase = await createClient();
+
+  // The agency's agents, needed before the query so `agent` can be validated
+  // against real ids rather than trusted. RLS scopes this to the tenant, and
+  // the query below filters explicitly as well — AGENTS.md: "RLS is the
+  // enforcement layer; queries still filter explicitly."
+  const { data: agentRows } = await supabase
+    .from("voice_agents")
+    .select("id, name, vertical")
+    .eq("tenant_id", tenant.id)
+    .order("created_at", { ascending: true });
+  const agents = agentRows ?? [];
+
+  const activeAgent =
+    typeof agent === "string" && agents.some((a) => a.id === agent)
+      ? agent
+      : null;
+
+  // Which outcome chips exist depends on what this agency actually sells. A
+  // travel agency should never see a "Visits booked" chip pinned at 0.
+  // Filtering by one agent narrows it further to that agent's vertical.
+  const verticals = (
+    activeAgent
+      ? agents.filter((a) => a.id === activeAgent)
+      : agents
+  ).map((a) => a.vertical);
+  const filters = callFilters(verticals);
+
+  const activeFilter = filters.find((f) => f.key === filter)?.key ?? "all";
   const activeBand = BAND_ORDER.includes(band as LeadBand)
     ? (band as LeadBand)
     : null;
@@ -45,7 +72,6 @@ export default async function CallsPage(
   const from = (currentPage - 1) * PAGE_SIZE;
   const to = from + PAGE_SIZE - 1;
 
-  const supabase = await createClient();
   let query = supabase
     .from("calls")
     .select("*", { count: "exact" })
@@ -53,6 +79,8 @@ export default async function CallsPage(
     .range(from, to);
 
   if (activeFilter !== "all") query = query.eq("outcome", activeFilter);
+
+  if (activeAgent) query = query.eq("voice_agent_id", activeAgent);
 
   if (activeBand) {
     const { min, max } = bandRange(activeBand);
@@ -82,7 +110,11 @@ export default async function CallsPage(
   // capped silently at PostgREST's 1000-row limit, so on a tenant with 1,369
   // calls the chips summed to 1000 while the sidebar said 1369 — two numbers
   // for the same thing on one screen.
-  const outcomeCounts = await getOutcomeCounts(tenant.id);
+  //
+  // Scoped to the selected agent as well, or the chips would keep reporting
+  // tenant-wide totals over a list showing one agent — the same two-numbers
+  // problem in a new place.
+  const outcomeCounts = await getOutcomeCounts(tenant.id, activeAgent);
   const countFor = (key: string) => outcomeCounts[key] ?? 0;
 
   /** Preserve the other filters when one of them changes. */
@@ -91,6 +123,7 @@ export default async function CallsPage(
     const merged: Record<string, string | null> = {
       filter: activeFilter === "all" ? null : activeFilter,
       band: activeBand,
+      agent: activeAgent,
       q: search || null,
       ...next,
     };
@@ -99,7 +132,11 @@ export default async function CallsPage(
     return s ? `?${s}` : "?";
   };
 
-  const filtered = Boolean(activeBand || cleaned || activeFilter !== "all");
+  const filtered = Boolean(
+    activeAgent || activeBand || cleaned || activeFilter !== "all"
+  );
+  const agentName = (id: string) =>
+    agents.find((a) => a.id === id)?.name ?? "This agent";
 
   return (
     <section className="panel on">
@@ -109,9 +146,39 @@ export default async function CallsPage(
           <CallSearch initial={search} />
         </div>
 
+        {/* Agents are a third axis, and only worth showing when there is a
+            choice to make — a one-agent agency gets no chips, the same way
+            the tenant switcher renders a static block for a single tenant. */}
+        {agents.length > 1 && (
+          <div className="filters agent-filters">
+            <Link
+              href={linkWith({ agent: null, filter: null, page: null })}
+              className={`f-chip${activeAgent === null ? " on" : ""}`}
+            >
+              All agents
+            </Link>
+            {agents.map((a) => (
+              <Link
+                key={a.id}
+                href={linkWith({
+                  agent: a.id,
+                  // The outcome chips change with the vertical, so a filter
+                  // that does not exist for the new agent would stick in the
+                  // URL and silently return nothing.
+                  filter: null,
+                  page: null,
+                })}
+                className={`f-chip${activeAgent === a.id ? " on" : ""}`}
+              >
+                {a.name}
+              </Link>
+            ))}
+          </div>
+        )}
+
         <div className="calls-filters">
           <div className="filters">
-            {CALL_FILTERS.map((f) => (
+            {filters.map((f) => (
               <Link
                 key={f.key}
                 href={linkWith({ filter: f.key === "all" ? null : f.key, page: null })}
@@ -165,6 +232,7 @@ export default async function CallsPage(
           <p className="result-count">
             {count ?? 0} {count === 1 ? "call matches" : "calls match"}
             {cleaned ? ` “${search}”` : " these filters"}
+            {activeAgent ? ` · ${agentName(activeAgent)}` : ""}
             {" · "}
             <Link href="?">Clear</Link>
           </p>

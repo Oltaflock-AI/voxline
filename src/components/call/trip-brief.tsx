@@ -1,33 +1,40 @@
 import Link from "next/link";
-import type { CallAnalysis } from "@/lib/calls";
+import {
+  BRIEF_FIELDS,
+  BRIEF_TITLE,
+  type AgentVertical,
+  type CallAnalysis,
+} from "@/lib/calls";
 
 /**
- * The structured trip brief (spec §6.3): destination, dates, party, budget and
- * occasion, plus a link through to the lead.
+ * The structured brief (spec §6.3), plus a link through to the lead.
  *
- * The field names here are the same six keys the voice agent emits and the
- * same six stored in `calls.analysis`. That parity is deliberate — it is what
- * lets the webhook write the column without a translation layer.
+ * ONE component for both verticals, not two. The markup is a contract with
+ * `.brief` / `.brief-grid` / `.brief-link` in globals.css, and duplicating it
+ * for real estate would mean two files drifting from one stylesheet. The only
+ * thing that varies is which fields to show and what to call the card, and
+ * both of those live in BRIEF_FIELDS / BRIEF_TITLE in lib/calls.ts.
+ *
+ * Those field names are the same keys the voice agent emits and the same keys
+ * stored in `calls.analysis`. That parity is deliberate — it is what lets the
+ * webhook write the column without a translation layer.
  */
 export function TripBrief({
   analysis,
+  vertical,
   leadHref,
 }: {
   analysis: CallAnalysis;
+  vertical: AgentVertical;
   leadHref?: string;
 }) {
-  const fields: [string, string | null | undefined][] = [
-    ["Destination", analysis.destination],
-    ["Dates", analysis.dates],
-    ["Party", analysis.party_size],
-    ["Budget", analysis.budget],
-    ["Occasion", analysis.occasion],
-  ];
-  const present = fields.filter(([, v]) => v);
+  const present = BRIEF_FIELDS[vertical]
+    .map(([key, label]) => [label, analysis[key]] as const)
+    .filter(([, v]) => v);
 
   return (
     <div className="brief">
-      <span className="lab">Trip brief</span>
+      <span className="lab">{BRIEF_TITLE[vertical]}</span>
       <div className="brief-grid">
         {present.map(([k, v]) => (
           <div key={k}>
@@ -52,7 +59,7 @@ export function TripBrief({
 
       {leadHref && (
         <Link className="brief-link" href={leadHref}>
-          Open in trip pipeline
+          Open in pipeline
           <svg
             width="13"
             height="13"

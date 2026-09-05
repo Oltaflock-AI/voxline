@@ -1,0 +1,38 @@
+-- ============================================================================
+-- Real estate, part 1 of 2 — two new call outcomes.
+-- ============================================================================
+--
+-- `call_outcome` was written for travel: an enquiry, a quote request, a
+-- voicemail, or a dud. A real-estate call ends differently. The two endings
+-- that matter are not in the enum:
+--
+--   site_visit_booked      the caller agreed a day and a slot was actually
+--                          booked. This is the product. Sarthak Singapore's
+--                          three agents exist to produce exactly this, and it
+--                          is the ONE outcome backed by an external record —
+--                          a Cal.com booking id — rather than a model's
+--                          reading of the transcript.
+--
+--   transferred_to_human   the caller asked about price or possession, agreed
+--                          to be connected, and the transfer fired. Hot, but
+--                          not booked. In Sarthak's flow this is the second
+--                          best thing that can happen on a call, and it is
+--                          also verifiable: the provider reports whether the
+--                          transfer tool actually executed.
+--
+-- Both are provider-verifiable on purpose. See the ingest note in part 2.
+--
+-- WHY THIS IS ITS OWN MIGRATION. Postgres allows `ALTER TYPE ... ADD VALUE`
+-- inside a transaction, but the new label cannot be USED in that same
+-- transaction, and the CLI wraps each migration file in one. A single file
+-- that adds a value and then writes a CASE over it fails with
+--   ERROR: unsafe use of new value "site_visit_booked" of enum type call_outcome
+-- which reads like a permissions problem and is not. Part 2 does the using.
+-- This is the same split as 20260903120000_add_vapi_provider.sql.
+--
+-- `if not exists` keeps it re-runnable, which matters because Voxline has TWO
+-- cloud databases and migrations are applied to each by hand.
+-- ============================================================================
+
+alter type call_outcome add value if not exists 'site_visit_booked';
+alter type call_outcome add value if not exists 'transferred_to_human';

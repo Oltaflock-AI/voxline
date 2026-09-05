@@ -14,6 +14,11 @@ import type { VoiceProvider } from "@/lib/ingest";
  * Retell and Vapi have agent-management APIs and will support both. They are
  * off here until their client exists; flipping a flag without the code behind
  * it would put a button on the page that 500s.
+ *
+ * ElevenLabs ingests calls (adapter + webhook route, brief task 3) but is not
+ * CONNECTABLE: its post-call webhook is created in the ElevenLabs console and
+ * selected per agent there, and Voxline has no code that writes it. Marking it
+ * connectable would render a Connect panel whose button cannot work.
  */
 export type ProviderCapabilities = {
   label: string;
@@ -42,7 +47,25 @@ export const PROVIDER_CAPABILITIES: Record<VoiceProvider, ProviderCapabilities> 
     build: false,
     note: "Coming after Vapi. Until then, paste the agent ID into the agent form.",
   },
+  elevenlabs: {
+    label: "ElevenLabs",
+    connect: false,
+    build: false,
+    note:
+      "Paste the agent ID here, then create a post-call webhook in the ElevenLabs console pointing at the URL on the Webhooks page. Voxline verifies the signature but cannot set the webhook for you.",
+  },
 };
 
-/** Display order in the picker. Sarvam first because it is the one that works. */
-export const PROVIDER_ORDER: VoiceProvider[] = ["sarvam", "vapi", "retell"];
+/**
+ * Display order in the picker. Sarvam first because it is the one that works.
+ *
+ * NOT exhaustive over the enum — this is a plain array, so adding a provider
+ * is NOT a compile error here. Forget to add it and the provider silently
+ * never appears in the admin picker, with nothing failing anywhere.
+ */
+export const PROVIDER_ORDER: VoiceProvider[] = [
+  "sarvam",
+  "elevenlabs",
+  "vapi",
+  "retell",
+];

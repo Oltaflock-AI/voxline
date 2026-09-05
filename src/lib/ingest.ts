@@ -1,6 +1,13 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Database } from "@/lib/supabase/database.types";
-import type { TranscriptTurn, CallAnalysis } from "@/lib/calls";
+import {
+  BRIEF_FIELDS,
+  LEAD_FALLBACK_SUMMARY,
+  type AgentVertical,
+  type CallAnalysis,
+  type TranscriptTurn,
+} from "@/lib/calls";
+import { OUTCOMES_BY_VERTICAL } from "@/lib/outcomes";
 import { storeRecording, type RecordingSource } from "@/lib/recordings";
 import { retrySarvamRecording } from "@/lib/recording-retry";
 
@@ -63,18 +70,45 @@ export type IngestResult =
   | { ok: true; callId: string; leadCreated: boolean }
   | { ok: false; status: number; reason: string };
 
-/** Spec §4 step 3: these two outcomes create a lead. */
+/**
+ * Which outcomes are worth a pipeline card.
+ *
+ * Spec §4 step 3 named the two travel ones. Real estate adds the two that
+ * matter most: a booked site visit is the strongest lead the product can
+ * produce, and a caller who asked for the team and was transferred is one step
+ * behind it. Leaving them out meant the single most valuable outcome created
+ * nothing for anyone to follow up.
+ */
+const LEAD_OUTCOMES: CallOutcome[] = [
+  "inquiry_captured",
+  "quote_requested",
+  "site_visit_booked",
+  "transferred_to_human",
+];
+
 export function qualifiesAsLead(outcome: CallOutcome) {
-  return outcome === "inquiry_captured" || outcome === "quote_requested";
+  return LEAD_OUTCOMES.includes(outcome);
 }
 
-/** The one-line summary shown on a pipeline card. */
-export function buildLeadSummary(analysis: CallAnalysis | undefined): string {
-  if (!analysis) return "Trip inquiry";
+/**
+ * The one-line summary shown on a pipeline card.
+ *
+ * Built from BRIEF_FIELDS rather than a hardcoded list, so a real-estate card
+ * reads "Investment · Commercial · 1200 sq ft" instead of the literal string
+ * "Trip inquiry", which is what every property lead said before this.
+ */
+export function buildLeadSummary(
+  analysis: CallAnalysis | undefined,
+  vertical: AgentVertical
+): string {
+  const fallback = LEAD_FALLBACK_SUMMARY[vertical];
+  if (!analysis) return fallback;
   return (
-    [analysis.destination, analysis.dates, analysis.party_size, analysis.budget]
-      .filter(Boolean)
-      .join(" · ") || "Trip inquiry"
+    BRIEF_FIELDS[vertical]
+      .map(([key]) => analysis[key])
+      .filter((v): v is string => typeof v === "string" && v.trim() !== "")
+      .slice(0, 4)
+      .join(" · ") || fallback
   );
 }
 
@@ -93,7 +127,7 @@ export async function ingestCall(call: NormalisedCall): Promise<IngestResult> {
   // written into a competitor's portal.
   const { data: agent, error: agentError } = await supabase
     .from("voice_agents")
-    .select("id, tenant_id")
+    .select("id, tenant_id, vertical")
     .eq("provider", call.provider)
     .eq("provider_agent_id", call.providerAgentId)
     .maybeSingle();
@@ -112,6 +146,28 @@ export async function ingestCall(call: NormalisedCall): Promise<IngestResult> {
     return { ok: false, status: 200, reason: "unknown agent" };
   }
 
+  // --- the vertical, snapshotted onto the call -----------------------------
+  // Copied onto the row rather than read back off the agent, because
+  // `calls.lead_score` is a GENERATED column and a generation expression may
+  // reference only its own row — no joins, no subqueries. See the header of
+  // 20260906090100_real_estate_vertical.sql. It is also the honest record: a
+  // call keeps the vertical it was actually scored under, even if the agent is
+  // later switched.
+  const vertical = agent.vertical;
+
+  // An adapter cannot know the vertical — it runs before this lookup — so it
+  // may hand up an outcome that belongs to the other one. Rather than store a
+  // value the filter chips will never show, fold it into the nearest outcome
+  // this vertical does have. Logged, because a travel agent emitting
+  // `site_visit_booked` means a prompt is configured wrong.
+  let outcome = call.outcome;
+  if (!OUTCOMES_BY_VERTICAL[vertical].includes(outcome)) {
+    console.warn(
+      `[ingest] ${call.provider}/${call.providerAgentId} is ${vertical} but emitted "${outcome}" — storing inquiry_captured`
+    );
+    outcome = "inquiry_captured";
+  }
+
   // --- upsert, merging rather than overwriting -----------------------------
   // Only fields this event actually carries are written. Providers split a
   // call across several events with different subsets — Retell's
@@ -125,7 +181,8 @@ export async function ingestCall(call: NormalisedCall): Promise<IngestResult> {
         voice_agent_id: agent.id,
         provider: call.provider,
         provider_call_id: call.providerCallId,
-        outcome: call.outcome,
+        outcome,
+        vertical,
         ...(call.callerName ? { caller_name: call.callerName } : {}),
         ...(call.callerPhone ? { caller_phone: call.callerPhone } : {}),
         ...(call.startedAt ? { started_at: call.startedAt } : {}),
@@ -215,7 +272,7 @@ export async function ingestCall(call: NormalisedCall): Promise<IngestResult> {
 
   // --- spec §4 step 3: qualifying calls create a lead ----------------------
   let leadCreated = false;
-  if (qualifiesAsLead(call.outcome)) {
+  if (qualifiesAsLead(outcome)) {
     const { count } = await supabase
       .from("leads")
       .select("id", { count: "exact", head: true })
@@ -231,7 +288,7 @@ export async function ingestCall(call: NormalisedCall): Promise<IngestResult> {
           tenant_id: agent.tenant_id,
           call_id: saved.id,
           name: call.callerName ?? call.callerPhone ?? "Unknown Caller",
-          summary: buildLeadSummary(call.analysis),
+          summary: buildLeadSummary(call.analysis, vertical),
           stage: "new_inquiry",
           tags: ["Inbound call"],
           position: count ?? 0,
@@ -278,12 +335,36 @@ export async function ingestCall(call: NormalisedCall): Promise<IngestResult> {
  * later" — that lands in not_a_fit alongside wrong numbers. Raised with Khush;
  * a fifth enum value would go here and in both agent prompts together.
  */
+/**
+ * Every outcome an adapter may hand us.
+ *
+ * The FULL enum, not one vertical's subset, because adapters run before the
+ * tenant is resolved and therefore cannot know which vertical the agent
+ * serves. `ingestCall` narrows it once it does — see the downgrade there.
+ * Validating against the wrong subset here is what would turn a booked site
+ * visit into `not_a_fit` and score it cold, permanently.
+ */
 export const VALID_OUTCOMES: CallOutcome[] = [
   "inquiry_captured",
   "quote_requested",
   "voicemail",
   "not_a_fit",
+  "site_visit_booked",
+  "transferred_to_human",
 ];
+
+/** Did the caller give us anything worth keeping, in either vertical? */
+function capturedSomething(analysis: CallAnalysis): boolean {
+  const keys = new Set<keyof CallAnalysis>([
+    ...BRIEF_FIELDS.travel.map(([k]) => k),
+    ...BRIEF_FIELDS.real_estate.map(([k]) => k),
+  ]);
+  for (const key of keys) {
+    const value = analysis[key];
+    if (typeof value === "string" && value.trim() !== "") return true;
+  }
+  return false;
+}
 
 export function inferOutcome(
   raw: unknown,
@@ -294,21 +375,27 @@ export function inferOutcome(
     return raw as CallOutcome;
   }
   // Short and nothing captured: almost certainly an answering machine.
-  if (durationSeconds < 30 && !analysis.destination && !analysis.dates) {
+  if (durationSeconds < 30 && !capturedSomething(analysis)) {
     return "voicemail";
   }
-  // Same bar the agent prompt uses: a destination or a date is enough to be
-  // worth a consultant's time.
-  if (analysis.destination || analysis.dates) return "inquiry_captured";
+  // Same bar both agent prompts use: one concrete requirement is enough to be
+  // worth a consultant's time. Vertical-agnostic, because this runs before the
+  // vertical is known — a destination and a property type are the same signal
+  // wearing different clothes.
+  if (capturedSomething(analysis)) return "inquiry_captured";
   return "not_a_fit";
 }
 
 /**
- * Pull the six trip-brief fields out of whatever variable bag a provider sends.
+ * Pull the brief fields out of whatever variable bag a provider sends.
  *
- * These six keys are exactly the columns of `calls.analysis` and exactly the
- * output variables configured on both the Sarvam and Retell agents. Keeping
- * those three lists identical is what removes the need for a mapping layer —
+ * Reads the UNION of both verticals — a travel agent never emits
+ * `property_type`, so that key comes back null, and no vertical argument is
+ * needed at a point in the flow where the vertical is not yet known. Which of
+ * these keys are SCORED is BRIEF_FIELDS in lib/calls.ts.
+ *
+ * These key names are exactly the columns of `calls.analysis` and exactly the
+ * output variables configured on the agents. Keeping those three lists is what removes the need for a mapping layer —
  * and we already shipped that bug once, on the ElevenLabs agent, where the
  * prompt emitted `num_travellers` while the reader looked for `num_travelers`
  * and the field silently arrived empty forever.
@@ -328,8 +415,13 @@ export function extractAnalysis(
     destination: pick("destination"),
     dates: pick("dates"),
     party_size: pick("party_size"),
-    budget: pick("budget"),
     occasion: pick("occasion"),
+    intent: pick("intent"),
+    property_type: pick("property_type"),
+    unit_size: pick("unit_size"),
+    timeline: pick("timeline"),
+    residency: pick("residency"),
+    budget: pick("budget"),
     notes: pick("notes") ?? fallbackNotes ?? null,
   };
 }

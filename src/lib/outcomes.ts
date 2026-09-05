@@ -1,4 +1,5 @@
 import type { Database } from "@/lib/supabase/database.types";
+import type { AgentVertical } from "@/lib/calls";
 
 /**
  * Outcome constants, deliberately in their own module with NO imports that
@@ -60,20 +61,91 @@ export const OUTCOME_META: Record<
     badge: "bad",
     cssKey: "lost",
   },
+  // --- real estate ---------------------------------------------------------
+  // cssKey reuses the existing prototype classes rather than adding new ones:
+  // globals.css defines only `qualified`, `booked` and `lost`, and it is the
+  // design source of truth, which AGENTS.md says wins on look.
+  site_visit_booked: {
+    label: "Site visit booked",
+    short: "Visit booked",
+    color: "var(--positive)",
+    badge: "ok",
+    cssKey: "booked",
+  },
+  transferred_to_human: {
+    label: "Transferred to the team",
+    short: "Transferred",
+    color: "var(--accent)",
+    badge: "acc",
+    cssKey: "qualified",
+  },
 };
 
+/**
+ * Which outcomes a given vertical can actually produce, in display order.
+ *
+ * Keyed by vertical because the enum is shared but the outcomes are not: a
+ * travel agency never books a site visit, and a real-estate agent is forbidden
+ * from quoting a price. Showing a chip that is permanently 0 teaches an agency
+ * to distrust the numbers on the page.
+ *
+ * These lists must stay in step with the CASE arms in
+ * 20260906090100_real_estate_vertical.sql — an outcome scored there and missing
+ * here is a call that scores but never appears in a filter.
+ */
+export const OUTCOMES_BY_VERTICAL: Record<AgentVertical, CallOutcome[]> = {
+  travel: ["inquiry_captured", "quote_requested", "voicemail", "not_a_fit"],
+  real_estate: [
+    "site_visit_booked",
+    "transferred_to_human",
+    "inquiry_captured",
+    "voicemail",
+    "not_a_fit",
+  ],
+};
+
+/**
+ * Every outcome, for surfaces that are not scoped to one vertical — the
+ * Overview breakdown on a tenant running both, and the admin console.
+ */
 export const OUTCOME_ORDER: CallOutcome[] = [
-  "inquiry_captured",
+  "site_visit_booked",
   "quote_requested",
+  "transferred_to_human",
+  "inquiry_captured",
   "voicemail",
   "not_a_fit",
 ];
 
 /** Filter chips on the Calls tab (spec §6.3), in display order. */
-export const CALL_FILTERS: { key: CallOutcome | "all"; label: string }[] = [
-  { key: "all", label: "All" },
-  { key: "inquiry_captured", label: "Inquiries" },
-  { key: "quote_requested", label: "Quotes" },
-  { key: "voicemail", label: "Voicemail" },
-  { key: "not_a_fit", label: "Not a fit" },
-];
+export type CallFilter = { key: CallOutcome | "all"; label: string };
+
+const FILTER_LABELS: Record<CallOutcome, string> = {
+  inquiry_captured: "Inquiries",
+  quote_requested: "Quotes",
+  site_visit_booked: "Visits booked",
+  transferred_to_human: "Transferred",
+  voicemail: "Voicemail",
+  not_a_fit: "Not a fit",
+};
+
+/**
+ * The chips for a tenant, given the verticals its agents actually run.
+ *
+ * A tenant with both gets the union, deduplicated and in OUTCOME_ORDER, rather
+ * than two "Voicemail" chips.
+ */
+export function callFilters(verticals: AgentVertical[]): CallFilter[] {
+  const wanted = new Set(
+    (verticals.length ? verticals : (["travel"] as AgentVertical[])).flatMap(
+      (v) => OUTCOMES_BY_VERTICAL[v]
+    )
+  );
+  return [
+    { key: "all" as const, label: "All" },
+    ...OUTCOME_ORDER.filter((o) => wanted.has(o)).map((o) => ({
+      key: o,
+      label: FILTER_LABELS[o],
+    })),
+  ];
+}
