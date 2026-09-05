@@ -218,3 +218,49 @@ own error rather than a generic failure.
 
 **Retell is unverified.** Its capabilities in the table above come from
 documentation, not from probing, because no key exists. Confirm before slice 3.
+
+---
+
+## Outcome of the first live Sarvam link — 2026-09-05
+
+Slice 1 works end to end. `Voxline Demo Test` (`Voxline-Dem-e9d47cba-bfc5`) is linked to
+the `Voxline Demo` agency in production, webhook verified, and a real inbound call to
++91 79 6585 3398 reached the portal with transcript, trip brief, lead, minutes and
+playable audio. Latest call: 85s, `inquiry_captured`, lead score 74, all five scored
+brief fields captured.
+
+Four things had to be fixed to get there, and each was invisible until a real call
+exercised it.
+
+**Sarvam refuses to edit a running deployment.** `setWebhook` answered 422 with
+`"Only paused deployments can be edited. Current status: 'active'."` Nothing to do with
+inbound, which was the standing hypothesis. The client captured the body but only logged
+`e.message`, so the reason was discarded at the moment it was needed; an hour went into
+the wrong theory. The body is now logged with the webhook token redacted, the error names
+the fix, and the Connect button is disabled for an `active` deployment rather than
+offering a guaranteed failure.
+
+**A fourth payload shape reaches the Sarvam webhook.** Setting `webhook_config` on an
+inbound deployment produces a body that carries `duration` where the `on_end` tool sends
+`call_length_seconds`, and omits `connectivity_status` entirely. The adapter read the
+absence as "never connected", so a 102-second conversation with a full transcript was
+stored as `not_a_fit` with an empty trip brief. The variable bag is now the payload
+itself whenever a separate bag is absent, and absence of `connectivity_status` no longer
+implies a failed call.
+
+**Recordings used the wrong Sarvam key.** `SARVAM_API_KEY` is the speech API;
+the analytics recording endpoint wants `SARVAM_VOICE_API_KEY`. Every fetch answered 401
+and surfaced as "Recording was not available within 10 minutes", which reads like Sarvam
+being slow rather than us presenting the wrong credential.
+
+**`webhook_config` DOES fire for inbound.** This answers the question
+`platform_docs/sarvam.md` had recorded as settled the other way since 2026-08-29. That
+note was wrong: the console does have a webhook field on an inbound deployment, under
+Advanced settings, collapsed by default. The `on_end` HTTPS tool has been removed from
+the agent — it was still posting to a dead Cloudflare tunnel from local testing, with a
+30-second max wait on every call, and it would have produced a second row under a
+different id had it been repointed, billing each call twice.
+
+Not covered by slice 1 and still open: Build and Manage screens, `agent_versions`,
+`phone_numbers`, and Twilio.
+
