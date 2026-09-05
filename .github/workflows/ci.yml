@@ -62,6 +62,12 @@ jobs:
           echo "SUPABASE_SERVICE_ROLE_KEY=$(supabase status -o env | grep '^SERVICE_ROLE_KEY' | cut -d= -f2- | tr -d '\"')" >> $GITHUB_ENV
           echo "NEXT_PUBLIC_APP_URL=http://localhost:3000" >> $GITHUB_ENV
           echo "RETELL_WEBHOOK_SECRET=ci-test-secret" >> $GITHUB_ENV
+          # ElevenLabs verifies per WORKSPACE, so the tests need both the
+          # default secret and one named workspace. Without these the route
+          # answers 500 "not configured" — which is the correct behaviour, and
+          # looks nothing like the real cause when a test fails on it.
+          echo "ELEVENLABS_WEBHOOK_SECRET=ci-test-secret" >> $GITHUB_ENV
+          echo "ELEVENLABS_WEBHOOK_SECRET_SCRATCH=ci-scratch-secret" >> $GITHUB_ENV
 
       - name: Install browsers
         run: npx playwright install --with-deps chromium

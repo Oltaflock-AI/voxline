@@ -95,7 +95,15 @@ test.describe("admin console works", () => {
     await expect(
       page.getByRole("heading", { name: "Blue Harbor Travel" })
     ).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Voice agent" })).toBeVisible();
+    // `exact` matters: "Connect a voice agent" now renders below the agent's
+    // own card, always rather than only when the agency has none, so an agency
+    // can be given a second line. A loose match hits both headings.
+    await expect(
+      page.getByRole("heading", { name: "Voice agent", exact: true })
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Connect a voice agent" })
+    ).toBeVisible();
     await expect(page.getByText("sofia@voxline.test")).toBeVisible();
   });
 

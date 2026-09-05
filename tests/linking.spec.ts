@@ -153,6 +153,79 @@ test.describe("linkSarvamDeployment", () => {
     expect(count).toBe(1);
   });
 
+  test("one tenant can hold two Sarvam agents, and re-linking still repairs", async () => {
+    /**
+     * The regression test for the multi-agent blocker.
+     *
+     * The old update-or-insert asked "does this tenant have a Sarvam agent"
+     * with a bare .maybeSingle(). Two rows make PostgREST answer 406, so the
+     * data came back null, the code took the insert branch, and the insert
+     * tripped the unique index on (provider, provider_agent_id). An agency
+     * with two lines could link neither of them.
+     *
+     * Sarthak Singapore runs one agent per property, so this is the normal
+     * case now. The second half of the test pins the behaviour that must NOT
+     * change: re-linking the SAME deployment still updates in place.
+     */
+    const tenantId = await throwawayTenant("multi");
+
+    // Ids unique to THIS test. (provider, provider_agent_id) is unique across
+    // the whole table, so reusing the default fixture's app_id would collide
+    // with the row another test in this file already owns — and the failure
+    // would read as "already linked to another agency", which is correct
+    // behaviour reported against the wrong cause.
+    const first = deployment({
+      deployment_id: `dep-multi-a-${RUN}`,
+      app_id: `app-multi-a-${RUN}`,
+      name: "First Property Line",
+    });
+    const second = deployment({
+      deployment_id: `dep-multi-b-${RUN}`,
+      app_id: `app-multi-b-${RUN}`,
+      name: "Second Property Line",
+      phone_numbers: ["+917900000002"],
+    });
+
+    const a = await linkSarvamDeployment(
+      { tenantId, deploymentId: first.deployment_id, actorUserId: ADMIN_USER, appUrl: APP_URL },
+      { client: fakeSarvam(first).client, admin: admin() }
+    );
+    expect(a.ok).toBe(true);
+
+    const b = await linkSarvamDeployment(
+      { tenantId, deploymentId: second.deployment_id, actorUserId: ADMIN_USER, appUrl: APP_URL },
+      { client: fakeSarvam(second).client, admin: admin() }
+    );
+    expect(b.ok).toBe(true);
+
+    const { data: rows } = await admin()
+      .from("voice_agents")
+      .select("id, provider_agent_id, webhook_token")
+      .eq("tenant_id", tenantId)
+      .eq("provider", "sarvam");
+
+    expect(rows).toHaveLength(2);
+    // Distinct tokens: each line authenticates as itself, and copying one
+    // would break the unique index anyway.
+    expect(new Set(rows!.map((r) => r.webhook_token)).size).toBe(2);
+
+    // Re-linking the first deployment must repair its row, not add a third.
+    const again = await linkSarvamDeployment(
+      { tenantId, deploymentId: first.deployment_id, actorUserId: ADMIN_USER, appUrl: APP_URL },
+      { client: fakeSarvam(first).client, admin: admin() }
+    );
+    expect(again.ok).toBe(true);
+    if (!again.ok || !a.ok) return;
+    expect(again.agentId).toBe(a.agentId);
+
+    const { count } = await admin()
+      .from("voice_agents")
+      .select("id", { count: "exact", head: true })
+      .eq("tenant_id", tenantId)
+      .eq("provider", "sarvam");
+    expect(count).toBe(2);
+  });
+
   test("refuses to link an app_id another agency already owns", async () => {
     const a = await throwawayTenant("owner");
     const b = await throwawayTenant("thief");

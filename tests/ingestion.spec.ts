@@ -795,3 +795,231 @@ test.describe("Vapi ingestion", () => {
     await scratch.cleanup();
   });
 });
+
+/**
+ * ============================================================================
+ * ElevenLabs ingestion
+ * ============================================================================
+ *
+ * The only provider that both signs its deliveries AND needs a path token, and
+ * the two are not redundant: the token says which agent (and therefore which
+ * ElevenLabs workspace) the delivery belongs to, and the signature proves it
+ * really came from that workspace. The route resolves the agent first for
+ * exactly that reason, so these tests cover both halves independently.
+ *
+ * This is a service-role write path that bypasses RLS, which is why spec §8
+ * puts webhook verification under "never cut".
+ */
+
+const EL_SECRET = process.env.ELEVENLABS_WEBHOOK_SECRET ?? "ci-test-secret";
+
+/** A tenant with one ElevenLabs agent, thrown away afterwards. */
+async function makeElevenLabsTenant(label: string) {
+  const db = admin();
+  const suffix = crypto.randomBytes(6).toString("hex");
+
+  const { data: tenant, error: tErr } = await db
+    .from("tenants")
+    .insert({ name: `Scratch ${label}`, slug: `scratch-el-${label}-${suffix}`, initials: "SC" })
+    .select("id")
+    .single();
+  if (tErr) throw tErr;
+
+  const providerAgentId = `agent_${suffix}`;
+  const webhookToken = crypto.randomBytes(32).toString("hex");
+  const { data: agent, error: aErr } = await db
+    .from("voice_agents")
+    .insert({
+      tenant_id: tenant.id,
+      provider: "elevenlabs",
+      provider_agent_id: providerAgentId,
+      webhook_token: webhookToken,
+      name: `Scratch ElevenLabs ${label}`,
+      status: "live",
+    })
+    .select("id")
+    .single();
+  if (aErr) throw aErr;
+
+  return {
+    tenantId: tenant.id as string,
+    agentId: agent.id as string,
+    providerAgentId,
+    webhookToken,
+    async cleanup() {
+      await db.from("tenants").delete().eq("id", tenant.id);
+    },
+  };
+}
+
+/** `t=<unix>,v0=<hmac>` over `<t>.<rawBody>`, as ElevenLabs sends it. */
+function elevenLabsSignature(body: string, secret: string, tsSecs: number) {
+  const digest = crypto
+    .createHmac("sha256", secret)
+    .update(`${tsSecs}.${body}`, "utf8")
+    .digest("hex");
+  return `t=${tsSecs},v0=${digest}`;
+}
+
+function elevenLabsPayload(agentId: string, conversationId: string) {
+  return {
+    type: "post_call_transcription",
+    event_timestamp: Math.floor(Date.now() / 1000),
+    data: {
+      agent_id: agentId,
+      conversation_id: conversationId,
+      transcript: [
+        { role: "agent", message: "Namaste, Priya bol rahi hoon.", time_in_call_secs: 0 },
+        { role: "user", message: "Haan boliye.", time_in_call_secs: 4 },
+      ],
+      metadata: { call_duration_secs: 140, start_time_unix_secs: Math.floor(Date.now() / 1000) - 140 },
+      analysis: {
+        transcript_summary: "Caller asked about Goa in December.",
+        data_collection_results: {
+          destination: { value: "Goa", rationale: "caller said Goa" },
+          // The legacy Rise & Shine names, which the adapter maps.
+          travel_period: { value: "December", rationale: "caller said December" },
+          num_travellers: { value: "4 adults", rationale: "caller said four" },
+          outcome: { value: "inquiry_captured", rationale: "" },
+        },
+      },
+    },
+  };
+}
+
+async function postElevenLabs(
+  token: string,
+  payload: unknown,
+  opts: { secret?: string; tsSecs?: number; signature?: string } = {}
+) {
+  const body = JSON.stringify(payload);
+  const signature =
+    opts.signature ??
+    elevenLabsSignature(
+      body,
+      opts.secret ?? EL_SECRET,
+      opts.tsSecs ?? Math.floor(Date.now() / 1000)
+    );
+  return fetch(`${APP_URL}/api/webhooks/elevenlabs/${token}`, {
+    method: "POST",
+    headers: { "content-type": "application/json", "ElevenLabs-Signature": signature },
+    body,
+  });
+}
+
+test.describe("ElevenLabs ingestion", () => {
+  test("rejects an unrecognised token", async () => {
+    const res = await postElevenLabs("z".repeat(64), { type: "post_call_transcription" });
+    expect(res.status).toBe(401);
+  });
+
+  test("rejects a valid token with a bad signature", async () => {
+    const scratch = await makeElevenLabsTenant("badsig");
+    try {
+      const res = await postElevenLabs(
+        scratch.webhookToken,
+        elevenLabsPayload(scratch.providerAgentId, "conv_badsig"),
+        { secret: "not-the-secret" }
+      );
+      expect(res.status).toBe(401);
+
+      // And nothing was written on the way to rejecting it.
+      const { count } = await admin()
+        .from("calls")
+        .select("id", { count: "exact", head: true })
+        .eq("tenant_id", scratch.tenantId);
+      expect(count).toBe(0);
+    } finally {
+      await scratch.cleanup();
+    }
+  });
+
+  test("rejects a replayed delivery outside the timestamp window", async () => {
+    // The body never changes, so the digest stays valid forever. Only the
+    // timestamp check stops a captured delivery being replayed.
+    const scratch = await makeElevenLabsTenant("replay");
+    try {
+      const stale = Math.floor(Date.now() / 1000) - 60 * 60;
+      const res = await postElevenLabs(
+        scratch.webhookToken,
+        elevenLabsPayload(scratch.providerAgentId, "conv_replay"),
+        { tsSecs: stale }
+      );
+      expect(res.status).toBe(401);
+    } finally {
+      await scratch.cleanup();
+    }
+  });
+
+  test("rejects a body claiming a different agent", async () => {
+    const scratch = await makeElevenLabsTenant("mismatch");
+    try {
+      const res = await postElevenLabs(
+        scratch.webhookToken,
+        elevenLabsPayload("agent_someone_else", "conv_mismatch")
+      );
+      expect(res.status).toBe(401);
+    } finally {
+      await scratch.cleanup();
+    }
+  });
+
+  test("accepts a signed delivery, maps the legacy field names, and is idempotent", async () => {
+    const scratch = await makeElevenLabsTenant("ok");
+    const conversationId = `conv_${crypto.randomBytes(6).toString("hex")}`;
+    try {
+      const first = await postElevenLabs(
+        scratch.webhookToken,
+        elevenLabsPayload(scratch.providerAgentId, conversationId)
+      );
+      expect(first.status).toBe(200);
+
+      // Redelivery must update the same row, not add a second.
+      const second = await postElevenLabs(
+        scratch.webhookToken,
+        elevenLabsPayload(scratch.providerAgentId, conversationId)
+      );
+      expect(second.status).toBe(200);
+
+      const { data: calls } = await admin()
+        .from("calls")
+        .select("id, provider, vertical, outcome, duration_seconds, analysis, transcript")
+        .eq("tenant_id", scratch.tenantId);
+
+      expect(calls).toHaveLength(1);
+      const call = calls![0];
+      expect(call.provider).toBe("elevenlabs");
+      expect(call.vertical).toBe("travel");
+      expect(call.outcome).toBe("inquiry_captured");
+      expect(call.duration_seconds).toBe(140);
+
+      const analysis = call.analysis as Record<string, string | null>;
+      expect(analysis.destination).toBe("Goa");
+      // travel_period -> dates, num_travellers -> party_size. Without the alias
+      // table every historical Rise & Shine call would have an empty brief.
+      expect(analysis.dates).toBe("December");
+      expect(analysis.party_size).toBe("4 adults");
+
+      expect(call.transcript).toHaveLength(2);
+      expect((call.transcript as { speaker: string }[])[0].speaker).toBe("Agent");
+    } finally {
+      await scratch.cleanup();
+    }
+  });
+
+  test("accepts and ignores post_call_audio", async () => {
+    // Audio is fetched from the conversation endpoint instead. Answering
+    // anything but 200 would make ElevenLabs retry it forever.
+    const scratch = await makeElevenLabsTenant("audio");
+    try {
+      const res = await postElevenLabs(scratch.webhookToken, {
+        type: "post_call_audio",
+        data: { agent_id: scratch.providerAgentId, conversation_id: "conv_audio" },
+      });
+      expect(res.status).toBe(200);
+      expect((await res.json()).ignored).toContain("post_call_audio");
+    } finally {
+      await scratch.cleanup();
+    }
+  });
+});
