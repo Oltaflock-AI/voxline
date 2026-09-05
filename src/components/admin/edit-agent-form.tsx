@@ -3,6 +3,10 @@
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { updateAgent, type AdminFormState } from "@/app/admin/actions";
+import {
+  PROVIDER_CAPABILITIES,
+  PROVIDER_ORDER,
+} from "@/lib/providers/capabilities";
 
 const initial: AdminFormState = { error: null, ok: false };
 
@@ -64,10 +68,17 @@ export function EditAgentForm({
       <div className="admin-field-row">
         <div className="field">
           <label htmlFor="ea-provider">Provider</label>
+          {/* Built from the capability table, not a hand-written list. The
+              hardcoded version silently dropped ElevenLabs, so an ElevenLabs
+              agent's own provider was missing from its dropdown — and saving
+              the form would have changed the provider out from under it,
+              orphaning every call already ingested under the old pair. */}
           <select className="input" id="ea-provider" name="provider" defaultValue={agent.provider}>
-            <option value="sarvam">Sarvam</option>
-            <option value="retell">Retell AI</option>
-            <option value="vapi">Vapi</option>
+            {PROVIDER_ORDER.map((p) => (
+              <option key={p} value={p}>
+                {PROVIDER_CAPABILITIES[p].label}
+              </option>
+            ))}
           </select>
         </div>
 
@@ -123,7 +134,10 @@ export function EditAgentForm({
         </div>
       </div>
 
-      {agent.provider === "sarvam" && agent.webhook_token && (
+      {/* Every provider except Retell authenticates on the path token, so the
+          warning belongs to all of them — it was Sarvam-only when Sarvam was
+          the only one. */}
+      {agent.provider !== "retell" && agent.webhook_token && (
         <div className="notice">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
             <circle cx="12" cy="12" r="9" />
@@ -131,7 +145,7 @@ export function EditAgentForm({
           </svg>
           <p>
             <b>This agent has a webhook token.</b> Its URL is on the Webhooks
-            tab. The token is the only thing authenticating Sarvam&rsquo;s
+            tab. The token is what identifies this agency on the provider&rsquo;s
             calls, so treat that URL like a password.
           </p>
         </div>

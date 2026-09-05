@@ -150,7 +150,7 @@ export default async function CallsPage(
             choice to make — a one-agent agency gets no chips, the same way
             the tenant switcher renders a static block for a single tenant. */}
         {agents.length > 1 && (
-          <div className="filters agent-filters">
+          <div className="filters">
             <Link
               href={linkWith({ agent: null, filter: null, page: null })}
               className={`f-chip${activeAgent === null ? " on" : ""}`}

@@ -101,9 +101,11 @@ export default async function AgentPage(
           <path d="M12 8v5M12 16.5v.01" />
         </svg>
         <p>
-          <b>The Voxline team makes your changes.</b> Your agent answers a live
-          phone line, so you send us a request instead of editing the settings
-          here. We usually make the change the same day.
+          <b>The Voxline team makes your changes.</b>{" "}
+          {agents.length > 1
+            ? "Your agents answer live phone lines, so you send us a request instead of editing the settings here."
+            : "Your agent answers a live phone line, so you send us a request instead of editing the settings here."}{" "}
+          We usually make the change the same day.
         </p>
       </div>
 

@@ -240,6 +240,9 @@ function LinkStatus({
     linked_at: string | null;
     webhook_verified_at: string | null;
     last_synced_at: string | null;
+    webhook_forward_url: string | null;
+    webhook_forward_last_status: number | null;
+    webhook_forward_last_at: string | null;
   };
 }) {
   const verified = Boolean(agent.webhook_verified_at);
@@ -255,7 +258,9 @@ function LinkStatus({
               ? `${agent.provider} confirmed it will post finished calls to Voxline.`
               : agent.provider === "sarvam"
                 ? "Sarvam has not confirmed a webhook for this agent, so calls will not reach the portal and it cannot go live. Connect its deployment below, or if the URL from the Webhooks tab is already set in Sarvam, verify it."
-                : "This agent was wired before verification existed. Check its URL on the Webhooks tab."}
+                : agent.provider === "elevenlabs"
+                  ? "Voxline cannot set an ElevenLabs webhook — it is created in their console and selected per agent there. Take this agent's URL from the Webhooks tab, add it as a post-call webhook in the ElevenLabs workspace this agent belongs to, and put the secret it generates into Vercel."
+                  : "This agent was wired before verification existed. Check its URL on the Webhooks tab."}
           </span>
         </div>
         <span className={`badge ${verified ? "ok" : "acc"}`}>
@@ -280,6 +285,16 @@ function LinkStatus({
           <span>Webhook verified</span>
           <span>{fmt(agent.webhook_verified_at)}</span>
         </li>
+        {agent.webhook_forward_url && (
+          <li>
+            <span>Forwarding</span>
+            <span>
+              {agent.webhook_forward_last_at
+                ? `${agent.webhook_forward_last_status ?? "no response"} · ${fmt(agent.webhook_forward_last_at)}`
+                : "configured, nothing forwarded yet"}
+            </span>
+          </li>
+        )}
         <li>
           <span>Last synced</span>
           <span>{fmt(agent.last_synced_at)}</span>
