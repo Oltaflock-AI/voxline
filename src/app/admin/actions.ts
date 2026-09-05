@@ -3,6 +3,25 @@
 import { revalidatePath } from "next/cache";
 import { requirePlatformAdmin } from "@/lib/admin";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getAppUrl } from "@/lib/app-url";
+import { linkSarvamDeployment } from "@/lib/linking";
+import { PROVIDER_CAPABILITIES } from "@/lib/providers/capabilities";
+import {
+  sarvamClientFromEnv,
+  type SarvamDeployment,
+} from "@/lib/providers/sarvam-client";
+import type { VoiceProvider } from "@/lib/ingest";
+
+/**
+ * The providers a form may name. Derived from the capability table so adding
+ * a provider is one place, not three. Both agency forms used to check
+ * `!== "sarvam" && !== "retell"`, which rejected Vapi even though the enum,
+ * the migration and the <select> all had it.
+ */
+const VALID_PROVIDERS = Object.keys(PROVIDER_CAPABILITIES) as VoiceProvider[];
+function isProvider(value: string): value is VoiceProvider {
+  return (VALID_PROVIDERS as string[]).includes(value);
+}
 
 /**
  * Admin mutations.
@@ -28,10 +47,19 @@ export async function setAgentStatus(formData: FormData) {
 
   const { data: agent } = await admin
     .from("voice_agents")
-    .select("tenant_id, name")
+    .select("tenant_id, name, provider, webhook_verified_at")
     .eq("id", agentId)
     .maybeSingle();
   if (!agent) return;
+
+  // A Sarvam agent goes live only once Sarvam has confirmed it will POST to
+  // our webhook. Without that, "live" means a phone line answering calls that
+  // never reach the portal — which is exactly the failure this whole feature
+  // exists to prevent. Sarvam only for now: the existing Vapi agent was wired
+  // by hand before webhook_verified_at existed and must keep working.
+  if (status === "live" && agent.provider === "sarvam" && !agent.webhook_verified_at) {
+    return;
+  }
 
   await admin.from("voice_agents").update({ status }).eq("id", agentId);
 
@@ -184,7 +212,7 @@ export async function createAgency(
       ok: false,
     };
   }
-  if (provider !== "sarvam" && provider !== "retell") {
+  if (!isProvider(provider)) {
     return { error: "Choose a valid provider.", ok: false };
   }
 
@@ -274,7 +302,7 @@ export async function updateAgent(
     .slice(0, 12);
 
   if (!name) return { error: "The agent needs a name.", ok: false };
-  if (provider !== "sarvam" && provider !== "retell") {
+  if (!isProvider(provider)) {
     return { error: "Choose a valid provider.", ok: false };
   }
 
@@ -318,4 +346,105 @@ export async function updateAgent(
 
   revalidatePath("/admin");
   return { error: null, ok: true };
+}
+
+// ---------------------------------------------------------------------------
+// Connecting a provider agent — slice 1 of the provider control plane.
+// ---------------------------------------------------------------------------
+
+export type DeploymentListState = {
+  deployments: SarvamDeployment[];
+  error: string | null;
+};
+
+/**
+ * Every Sarvam deployment in our workspace, live from Sarvam.
+ *
+ * A server action rather than a route handler so the client component can
+ * call it directly, and so the admin check is the same function as everywhere
+ * else in this file. Errors are returned, not thrown: a Sarvam outage should
+ * read as "Sarvam could not be reached", not as a Next error boundary.
+ */
+export async function listSarvamDeployments(): Promise<DeploymentListState> {
+  await requirePlatformAdmin();
+
+  const client = sarvamClientFromEnv();
+  if (!client) {
+    return {
+      deployments: [],
+      error:
+        "Sarvam is not configured in this environment (SARVAM_VOICE_API_KEY, SARVAM_ORG_ID, SARVAM_WORKSPACE_ID).",
+    };
+  }
+
+  try {
+    return { deployments: await client.listDeployments(), error: null };
+  } catch (e) {
+    console.error("[admin] listSarvamDeployments failed", e instanceof Error ? e.message : e);
+    return { deployments: [], error: "Sarvam could not be reached. Try again in a moment." };
+  }
+}
+
+/**
+ * Adopt a provider agent for an agency and wire its webhook.
+ *
+ * Refuses when the app URL is not public: Sarvam would happily store
+ * http://localhost:3000/... and never be able to reach it, and that failure
+ * looks identical to "no calls today". Use a tunnel or a preview deployment.
+ */
+export async function linkAgent(
+  _prev: AdminFormState,
+  formData: FormData
+): Promise<AdminFormState> {
+  const user = await requirePlatformAdmin();
+
+  const provider = String(formData.get("provider") ?? "");
+  const tenantId = String(formData.get("tenantId") ?? "");
+  const deploymentId = String(formData.get("deploymentId") ?? "").trim().slice(0, 200);
+
+  if (!isProvider(provider) || !PROVIDER_CAPABILITIES[provider].connect) {
+    return { error: "That provider cannot be connected from here yet.", ok: false };
+  }
+  if (!tenantId || !deploymentId) {
+    return { error: "Choose a deployment to connect.", ok: false };
+  }
+
+  const appUrl = getAppUrl();
+  if (!appUrl.startsWith("https://")) {
+    return {
+      error: `Webhooks need a public https URL and this environment is ${appUrl}. Link from a deployed environment, or set NEXT_PUBLIC_APP_URL to a tunnel.`,
+      ok: false,
+    };
+  }
+
+  const admin = createAdminClient();
+  const { data: tenant } = await admin
+    .from("tenants")
+    .select("id")
+    .eq("id", tenantId)
+    .maybeSingle();
+  if (!tenant) return { error: "That agency no longer exists.", ok: false };
+
+  // Only Sarvam passes the capability check today; the switch is here so the
+  // next provider is a new case rather than a new action.
+  switch (provider as VoiceProvider) {
+    case "sarvam": {
+      const client = sarvamClientFromEnv();
+      if (!client) {
+        return { error: "Sarvam is not configured in this environment.", ok: false };
+      }
+      const result = await linkSarvamDeployment(
+        { tenantId, deploymentId, actorUserId: user.id, appUrl },
+        { client, admin }
+      );
+      if (!result.ok) return { error: result.error, ok: false };
+
+      revalidatePath(`/admin/agencies/${tenantId}`);
+      revalidatePath("/admin/webhooks");
+      revalidatePath("/admin");
+      return { error: null, ok: true, id: result.agentId };
+    }
+    default:
+      return { error: "That provider cannot be connected from here yet.", ok: false };
+  }
 }
