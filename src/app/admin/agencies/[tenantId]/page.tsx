@@ -200,7 +200,7 @@ function LinkStatus({
   const fmt = (iso: string | null) => (iso ? new Date(iso).toLocaleString() : "—");
 
   return (
-    <section className={`card card-pad ${verified ? "" : "notice"}`}>
+    <section className="card card-pad">
       <div className="card-head">
         <div>
           <h3>{verified ? "Webhook verified" : "Webhook not verified"}</h3>
