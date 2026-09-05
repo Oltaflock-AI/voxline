@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { EditAgentForm } from "@/components/admin/edit-agent-form";
 import { ConnectAgent } from "@/components/admin/connect-agent";
+import { VerifyWebhookButton } from "@/components/admin/verify-webhook-button";
 import { setAgentStatus } from "../../actions";
 
 /** Everything about one agency, and the controls that change it. */
@@ -189,6 +190,7 @@ function LinkStatus({
   agent,
 }: {
   agent: {
+    id: string;
     provider: string;
     provider_deployment_id: string | null;
     linked_at: string | null;
@@ -208,7 +210,7 @@ function LinkStatus({
             {verified
               ? `${agent.provider} confirmed it will post finished calls to Voxline.`
               : agent.provider === "sarvam"
-                ? "Sarvam has not confirmed a webhook for this agent. Calls will not reach the portal, and the agent cannot go live until it does. Use the Webhooks tab to set it by hand, or re-connect the deployment."
+                ? "Sarvam has not confirmed a webhook for this agent, so calls will not reach the portal and it cannot go live. Connect its deployment below, or if the URL from the Webhooks tab is already set in Sarvam, verify it."
                 : "This agent was wired before verification existed. Check its URL on the Webhooks tab."}
           </span>
         </div>
@@ -216,6 +218,9 @@ function LinkStatus({
           {verified ? "linked" : "unlinked"}
         </span>
       </div>
+      {!verified && agent.provider === "sarvam" && (
+        <VerifyWebhookButton agentId={agent.id} />
+      )}
       <ul className="admin-members">
         {agent.provider_deployment_id && (
           <li>

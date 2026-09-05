@@ -6,7 +6,7 @@ import type {
   SarvamDeployment,
 } from "../src/lib/providers/sarvam-client";
 import { SarvamClientError } from "../src/lib/providers/sarvam-client";
-import { linkSarvamDeployment, sarvamWebhookUrl } from "../src/lib/linking";
+import { linkSarvamDeployment, sarvamWebhookUrl, verifySarvamWebhook } from "../src/lib/linking";
 
 /**
  * The wiring step, against a fake Sarvam and the real local database.
@@ -212,5 +212,97 @@ test.describe("linkSarvamDeployment", () => {
       ok: false,
       error: expect.stringContaining("not found"),
     });
+  });
+});
+
+test.describe("verifySarvamWebhook", () => {
+  test("confirms a hand-wired webhook without re-linking", async () => {
+    const tenantId = await throwawayTenant("hand");
+    const dep = deployment({ app_id: `app-hand-${RUN}`, deployment_id: `dep-hand-${RUN}` });
+    const sarvam = fakeSarvam(dep);
+    const db = admin();
+
+    const { data: row, error } = await db
+      .from("voice_agents")
+      .insert({
+        tenant_id: tenantId,
+        provider: "sarvam",
+        provider_agent_id: `app-hand-${RUN}`,
+        name: "Hand Wired",
+        status: "paused",
+      })
+      .select("id, webhook_token")
+      .single();
+    if (error || !row) throw error ?? new Error("no row");
+
+    // Point the fake Sarvam's webhook_url at exactly what this row's token expects.
+    await sarvam.client.setWebhook(dep.deployment_id, sarvamWebhookUrl(APP_URL, row.webhook_token!));
+
+    const result = await verifySarvamWebhook(
+      { agentId: row.id, actorUserId: ADMIN_USER, appUrl: APP_URL },
+      { client: sarvam.client, admin: db }
+    );
+
+    expect(result).toEqual({ ok: true, agentId: row.id });
+
+    const { data: after } = await db
+      .from("voice_agents")
+      .select("provider_deployment_id, linked_at, webhook_verified_at")
+      .eq("id", row.id)
+      .single();
+    expect(after?.provider_deployment_id).toBe(`dep-hand-${RUN}`);
+    expect(after?.linked_at).not.toBeNull();
+    expect(after?.webhook_verified_at).not.toBeNull();
+
+    const { data: audit } = await db
+      .from("audit_log")
+      .select("action, payload")
+      .eq("tenant_id", tenantId)
+      .eq("action", "voice_agent.webhook_verified")
+      .single();
+    expect(audit).toBeTruthy();
+    expect(JSON.stringify(audit?.payload)).not.toContain(row.webhook_token!);
+  });
+
+  test("refuses when Sarvam's webhook points elsewhere", async () => {
+    const tenantId = await throwawayTenant("handbad");
+    const dep = deployment({
+      app_id: `app-handbad-${RUN}`,
+      deployment_id: `dep-handbad-${RUN}`,
+      webhook_url: "https://elsewhere.test/hook",
+    });
+    const sarvam = fakeSarvam(dep, { honourWrites: false });
+    const db = admin();
+
+    const { data: row, error } = await db
+      .from("voice_agents")
+      .insert({
+        tenant_id: tenantId,
+        provider: "sarvam",
+        provider_agent_id: `app-handbad-${RUN}`,
+        name: "Hand Wired Bad",
+        status: "paused",
+      })
+      .select("id")
+      .single();
+    if (error || !row) throw error ?? new Error("no row");
+
+    const result = await verifySarvamWebhook(
+      { agentId: row.id, actorUserId: ADMIN_USER, appUrl: APP_URL },
+      { client: sarvam.client, admin: db }
+    );
+
+    expect(result).toEqual({
+      ok: false,
+      error: expect.stringContaining("does not point at Voxline"),
+    });
+
+    const { data: after } = await db
+      .from("voice_agents")
+      .select("linked_at, webhook_verified_at")
+      .eq("id", row.id)
+      .single();
+    expect(after?.linked_at).toBeNull();
+    expect(after?.webhook_verified_at).toBeNull();
   });
 });

@@ -185,3 +185,115 @@ export async function linkSarvamDeployment(
 
   return { ok: true, agentId: agent.id };
 }
+
+/**
+ * Confirm a Sarvam webhook that was pointed at Voxline outside the console —
+ * pasted into Sarvam by hand, or set by a previous link that predates this
+ * check. Without this, an agent's only path to `webhook_verified_at` was
+ * `linkSarvamDeployment`, which re-links (and can steal) a deployment; an
+ * admin who only needs to confirm what is already correct had nowhere to go.
+ */
+export async function verifySarvamWebhook(
+  input: { agentId: string; actorUserId: string; appUrl: string },
+  deps: { client: SarvamClient; admin: Admin }
+): Promise<LinkResult> {
+  const { client, admin } = deps;
+
+  const { data: row } = await admin
+    .from("voice_agents")
+    .select("id, tenant_id, provider, provider_agent_id, provider_deployment_id, webhook_token")
+    .eq("id", input.agentId)
+    .maybeSingle();
+
+  if (!row) return { ok: false, error: "That agent no longer exists." };
+  if (row.provider !== "sarvam") {
+    return { ok: false, error: "Only Sarvam agents can be verified this way." };
+  }
+  if (!row.webhook_token) {
+    return { ok: false, error: "This agent has no webhook token to verify against." };
+  }
+
+  let deployment: SarvamDeployment;
+  try {
+    if (row.provider_deployment_id) {
+      deployment = await client.getDeployment(row.provider_deployment_id);
+    } else {
+      const all = await client.listDeployments();
+      const matches = all.filter((d) => d.app_id === row.provider_agent_id);
+      if (matches.length === 0) {
+        return {
+          ok: false,
+          error: `No Sarvam deployment uses app_id ${row.provider_agent_id}.`,
+        };
+      }
+      if (matches.length > 1) {
+        return {
+          ok: false,
+          error:
+            "More than one Sarvam deployment uses this app_id. Use the Connect panel below to pick the right one.",
+        };
+      }
+      deployment = matches[0];
+    }
+  } catch (e) {
+    if (e instanceof SarvamClientError && e.status === 404) {
+      return { ok: false, error: "That Sarvam deployment was not found." };
+    }
+    console.error("[verify] sarvam lookup failed", e instanceof Error ? e.message : e);
+    return { ok: false, error: "Sarvam could not be reached. Try again in a moment." };
+  }
+
+  const expected = sarvamWebhookUrl(input.appUrl, row.webhook_token);
+
+  if (deployment.webhook_url !== expected) {
+    return {
+      ok: false,
+      error:
+        "Sarvam's webhook for this deployment does not point at Voxline. Re-connect the deployment, or paste the URL from the Webhooks tab into Sarvam and verify again.",
+    };
+  }
+
+  const now = new Date().toISOString();
+  const { data: current } = await admin
+    .from("voice_agents")
+    .select("linked_at")
+    .eq("id", row.id)
+    .maybeSingle();
+
+  const { error: stampError } = await admin
+    .from("voice_agents")
+    .update({
+      provider_deployment_id: deployment.deployment_id,
+      ...(deployment.phone_numbers[0] ? { phone_number: deployment.phone_numbers[0] } : {}),
+      ...(current?.linked_at ? {} : { linked_at: now }),
+      webhook_verified_at: now,
+      last_synced_at: now,
+    })
+    .eq("id", row.id);
+
+  if (stampError) {
+    console.error("[verify] voice_agents update failed", stampError.message);
+    return {
+      ok: false,
+      error: "The webhook was confirmed but the agent record could not be updated. Try again.",
+    };
+  }
+
+  const { error: auditError } = await admin.from("audit_log").insert({
+    tenant_id: row.tenant_id,
+    actor_user_id: input.actorUserId,
+    action: "voice_agent.webhook_verified",
+    payload: {
+      provider: "sarvam",
+      agent_id: row.id,
+      deployment_id: deployment.deployment_id,
+      app_id: deployment.app_id,
+      app_version: deployment.app_version,
+    },
+  });
+  if (auditError) {
+    console.error("[verify] audit_log insert failed", auditError.message);
+  }
+
+  return { ok: true, agentId: row.id };
+}

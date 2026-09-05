@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requirePlatformAdmin } from "@/lib/admin";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAppUrl } from "@/lib/app-url";
-import { linkSarvamDeployment } from "@/lib/linking";
+import { linkSarvamDeployment, verifySarvamWebhook } from "@/lib/linking";
 import { PROVIDER_CAPABILITIES } from "@/lib/providers/capabilities";
 import {
   sarvamClientFromEnv,
@@ -447,4 +447,51 @@ export async function linkAgent(
     default:
       return { error: "That provider cannot be connected from here yet.", ok: false };
   }
+}
+
+/**
+ * Confirm a Sarvam webhook that already points at Voxline without re-linking
+ * the deployment — the path for an agent whose URL was pasted into Sarvam's
+ * console by hand, which `linkAgent` alone could never unblock.
+ */
+export async function verifyAgentWebhook(
+  _prev: AdminFormState,
+  formData: FormData
+): Promise<AdminFormState> {
+  const user = await requirePlatformAdmin();
+
+  const agentId = String(formData.get("agentId") ?? "").trim();
+  if (!agentId) return { error: "Choose an agent to verify.", ok: false };
+
+  const appUrl = getAppUrl();
+  if (!appUrl.startsWith("https://")) {
+    return {
+      error: `Webhooks need a public https URL and this environment is ${appUrl}. Verify from a deployed environment, or set NEXT_PUBLIC_APP_URL to a tunnel.`,
+      ok: false,
+    };
+  }
+
+  const client = sarvamClientFromEnv();
+  if (!client) {
+    return { error: "Sarvam is not configured in this environment.", ok: false };
+  }
+
+  const admin = createAdminClient();
+  const { data: agentRow } = await admin
+    .from("voice_agents")
+    .select("tenant_id")
+    .eq("id", agentId)
+    .maybeSingle();
+  if (!agentRow) return { error: "That agent no longer exists.", ok: false };
+
+  const result = await verifySarvamWebhook(
+    { agentId, actorUserId: user.id, appUrl },
+    { client, admin }
+  );
+  if (!result.ok) return { error: result.error, ok: false };
+
+  revalidatePath(`/admin/agencies/${agentRow.tenant_id}`);
+  revalidatePath("/admin/webhooks");
+  revalidatePath("/admin");
+  return { error: null, ok: true, id: result.agentId };
 }
