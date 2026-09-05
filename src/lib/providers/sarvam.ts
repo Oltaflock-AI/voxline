@@ -106,8 +106,25 @@ export function normaliseSarvamCall(
   const providerCallId = payload.attempt_id ?? payload.interaction_id;
   if (!providerCallId || !payload.app_id) return null;
 
-  const isOnEnd = payload.call_length_seconds !== undefined;
-  const vars = payload.final_agent_variables ?? (isOnEnd ? payload : undefined);
+  // THREE PAYLOAD SHAPES REACH THIS FUNCTION, and they disagree about
+  // everything except that a call happened.
+  //
+  //   campaign webhook   final_agent_variables{}, duration, connectivity_status
+  //   on_end HTTPS tool  fields at the top level, call_length_seconds
+  //   inbound webhook_config  fields at the top level, `duration`, and NEITHER
+  //                      call_length_seconds NOR connectivity_status
+  //
+  // The third only appeared on 2026-09-05, when Voxline first set
+  // `webhook_config` on an inbound deployment. It looked like the second but
+  // carries `duration`, so `call_length_seconds !== undefined` was false, the
+  // call was treated as never-connected, and a real 102-second conversation
+  // with a full transcript was filed as `not_a_fit` with an empty trip brief.
+  //
+  // So the variable bag is now the payload itself whenever a separate bag is
+  // absent, rather than only when one particular duration field is present.
+  // extractAnalysis picks six known keys and ignores everything else, so
+  // handing it the whole payload cannot pull in anything unintended.
+  const vars = payload.final_agent_variables ?? payload;
   const analysis = extractAnalysis(vars);
   const durationSeconds = Math.round(
     Number(payload.duration ?? payload.call_length_seconds ?? 0)
@@ -123,7 +140,15 @@ export function normaliseSarvamCall(
   // A call that never connected is not a voicemail and not a lead — it never
   // reached a person or an answering machine. Recording it as not_a_fit keeps
   // it out of the pipeline while still showing in the log.
-  const connected = isOnEnd || payload.connectivity_status === "connected";
+  //
+  // Only the campaign payload reports connectivity, and only it can describe a
+  // dial that never connected. Absence of that field is therefore not evidence
+  // of a failed call: both post-call shapes omit it and only ever describe
+  // calls that happened. Treating absence as "not connected" is what discarded
+  // the 2026-09-05 inbound call's trip brief.
+  const connected =
+    payload.connectivity_status === undefined ||
+    payload.connectivity_status === "connected";
   const outcome = connected
     ? inferOutcome(vars?.outcome, analysis, durationSeconds)
     : "not_a_fit";

@@ -88,7 +88,20 @@ const JSON_URL_KEYS = [
 async function fetchSarvamRecording(
   source: Extract<RecordingSource, { kind: "sarvam" }>
 ): Promise<Blob | null> {
-  const key = process.env.SARVAM_API_KEY;
+  // SARVAM_VOICE_API_KEY, not SARVAM_API_KEY. Sarvam issues two keys and they
+  // are not interchangeable: the Voice Agents key covers agents, deployments
+  // and the analytics endpoints including this one, while SARVAM_API_KEY is the
+  // speech API. This read the speech key and every fetch answered 401 — four
+  // attempts per call, then "Recording was not available within 10 minutes",
+  // which reads like Sarvam being slow rather than us presenting the wrong
+  // credential. Confirmed against a real inbound call on 2026-09-05, and it
+  // matches the note in platform_docs/sarvam.md from 2026-08-31: the analytics
+  // recording endpoint returns WAV bytes "when called with the Voice Agents API
+  // key".
+  //
+  // The old name is still read as a fallback so a deployment that only has the
+  // speech key configured keeps whatever behaviour it had.
+  const key = process.env.SARVAM_VOICE_API_KEY ?? process.env.SARVAM_API_KEY;
   const org = process.env.SARVAM_ORG_ID;
   const workspace = process.env.SARVAM_WORKSPACE_ID;
 
@@ -96,7 +109,7 @@ async function fetchSarvamRecording(
     // Not an error worth alarming about: a deployment that has not been given
     // Sarvam analytics credentials simply stores calls without audio.
     console.warn(
-      "[recordings] SARVAM_API_KEY/ORG_ID/WORKSPACE_ID unset — skipping recording fetch"
+      "[recordings] SARVAM_VOICE_API_KEY/ORG_ID/WORKSPACE_ID unset — skipping recording fetch"
     );
     return null;
   }

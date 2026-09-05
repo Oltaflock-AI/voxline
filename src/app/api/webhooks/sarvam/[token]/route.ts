@@ -87,6 +87,21 @@ export async function POST(
     return NextResponse.json({ ok: true, ignored: "unparseable" });
   }
 
+  // KEY NAMES ONLY, never values. Sarvam delivers at least three post-call
+  // shapes to this one route and they disagree about which field holds the
+  // duration, the id and the variables. On 2026-09-05 an inbound
+  // `webhook_config` delivery was mistaken for a call that never connected,
+  // and the trip brief was discarded, because it used `duration` where the
+  // adapter expected `call_length_seconds`. There was no way to see that from
+  // the outside; a call arrived and was quietly wrong.
+  //
+  // Keys are safe to log and answer the question immediately. Values are not:
+  // this payload carries the caller's phone number, their name and the whole
+  // transcript.
+  console.log(
+    `[sarvam] payload keys: ${Object.keys(payload ?? {}).sort().join(",")}`
+  );
+
   // The token proves which agent is calling. If the body claims a different
   // app_id, something is wrong — either a misconfigured webhook URL or a
   // forged body — and guessing which would mean writing a call into the wrong
