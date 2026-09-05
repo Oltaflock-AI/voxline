@@ -6,7 +6,12 @@ import type {
   SarvamDeployment,
 } from "../src/lib/providers/sarvam-client";
 import { SarvamClientError } from "../src/lib/providers/sarvam-client";
-import { linkSarvamDeployment, sarvamWebhookUrl, verifySarvamWebhook } from "../src/lib/linking";
+import {
+  linkSarvamDeployment,
+  redactWebhookToken,
+  sarvamWebhookUrl,
+  verifySarvamWebhook,
+} from "../src/lib/linking";
 
 /**
  * The wiring step, against a fake Sarvam and the real local database.
@@ -304,5 +309,32 @@ test.describe("verifySarvamWebhook", () => {
       .single();
     expect(after?.linked_at).toBeNull();
     expect(after?.webhook_verified_at).toBeNull();
+  });
+});
+
+/**
+ * The redactor exists so a provider's error body can be logged safely. If it
+ * ever stops matching the URL shape, the webhook token starts appearing in
+ * production logs and nothing else would notice.
+ */
+test.describe("redactWebhookToken", () => {
+  test("strips the token from a webhook URL but leaves the rest readable", () => {
+    const token = "4e271e59f8f14029a16cd3e07ce081fc3908b2fa9cfc431b890cdf2ecdc623b3";
+    const body = JSON.stringify({
+      detail: [{ msg: "invalid", input: `https://voxline.oltaflock.ai/api/webhooks/sarvam/${token}` }],
+    });
+    const out = redactWebhookToken(body);
+    expect(out).not.toContain(token);
+    expect(out).toContain("/api/webhooks/sarvam/<redacted>");
+    expect(out).toContain("invalid");
+  });
+
+  test("leaves an unrelated long id alone", () => {
+    const out = redactWebhookToken('{"deployment_id":"Voxline-Dem-e9d47cba-bfc5"}');
+    expect(out).toContain("Voxline-Dem-e9d47cba-bfc5");
+  });
+
+  test("caps the length so a huge body cannot flood the log", () => {
+    expect(redactWebhookToken("x".repeat(5000)).length).toBe(1200);
   });
 });

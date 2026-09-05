@@ -41,6 +41,21 @@ export function sarvamWebhookUrl(appUrl: string, token: string): string {
   return `${appUrl.replace(/\/+$/, "")}/api/webhooks/sarvam/${token}`;
 }
 
+/**
+ * Strip the webhook token out of anything before it reaches a log.
+ *
+ * `/api/webhooks/sarvam/<64 hex>` — the token is the only thing authenticating
+ * that provider's calls, so it must never be logged, and a provider error body
+ * is exactly the place it can reappear without anyone intending it. Matches the
+ * path shape rather than a bare hex run, so an unrelated 64-character id in a
+ * payload is left readable.
+ */
+export function redactWebhookToken(text: string): string {
+  return text
+    .replace(/(\/api\/webhooks\/[a-z]+\/)[A-Za-z0-9_-]{16,}/g, "$1<redacted>")
+    .slice(0, 1200);
+}
+
 export async function linkSarvamDeployment(
   input: {
     tenantId: string;
@@ -121,7 +136,25 @@ export async function linkSarvamDeployment(
     await client.setWebhook(deployment.deployment_id, url);
     after = await client.getDeployment(deployment.deployment_id);
   } catch (e) {
-    console.error("[link] sarvam setWebhook failed", e instanceof Error ? e.message : e);
+    // Log Sarvam's REASON, not just its status code.
+    //
+    // The first real link attempt (2026-09-05, production, deployment
+    // Voxline-Dem-e9d47cba-bfc5) returned 422: the endpoint exists and the key
+    // was accepted, so Sarvam understood the request and refused the content.
+    // Which is the whole question — platform_docs/sarvam.md records that an
+    // inbound deployment has no webhook field in the console at all, and that
+    // the working path for inbound is an agent-level `on_end` HTTPS tool. If
+    // that is why this 422s, Sarvam's body says so and we could not see it,
+    // because only `e.message` was logged and the body was dropped.
+    //
+    // The body is redacted first. A 422 commonly echoes the offending input
+    // back, and the input here is the webhook URL, whose last path segment is
+    // the token that authenticates every call this agent will ever send.
+    console.error(
+      "[link] sarvam setWebhook failed",
+      e instanceof Error ? e.message : e,
+      e instanceof SarvamClientError ? `body=${redactWebhookToken(e.body)}` : ""
+    );
     return {
       ok: false,
       error: "Sarvam rejected the webhook update. The agent record was saved but is not linked.",
