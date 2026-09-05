@@ -132,4 +132,30 @@ test.describe("admin console works", () => {
     await expect(page.getByText("/api/webhooks/sarvam/").first()).toBeVisible();
     await expect(page.getByText("No webhook token")).toHaveCount(0);
   });
+
+  test("an agency with no agent offers to connect one", async ({ page }) => {
+    // A throwaway tenant with no voice_agents row, so the empty state renders.
+    const slug = `noagent-${Date.now().toString(36)}`;
+    const { data: tenant } = await admin()
+      .from("tenants")
+      .insert({ name: "No Agent Yet", slug, initials: "NA" })
+      .select("id")
+      .single();
+
+    await page.goto(`/admin/agencies/${tenant!.id}`);
+
+    await expect(page.getByRole("heading", { name: "Connect a voice agent" })).toBeVisible();
+    const picker = page.getByLabel("Provider");
+    await expect(picker).toHaveValue("sarvam");
+    // The disabled providers are listed and say so, rather than being hidden.
+    await expect(picker.locator("option", { hasText: "Vapi — not yet" })).toHaveCount(1);
+    await expect(picker.locator("option", { hasText: "Retell AI — not yet" })).toHaveCount(1);
+  });
+
+  test("a linked agent shows its verification status", async ({ page }) => {
+    // Blue Harbor's seeded Sarvam agent was never linked through the console,
+    // so it must read as unverified rather than pretend otherwise.
+    await page.goto("/admin/agencies/11111111-1111-1111-1111-111111111111");
+    await expect(page.getByText("Webhook not verified")).toBeVisible();
+  });
 });

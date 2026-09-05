@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { EditAgentForm } from "@/components/admin/edit-agent-form";
+import { ConnectAgent } from "@/components/admin/connect-agent";
 import { setAgentStatus } from "../../actions";
 
 /** Everything about one agency, and the controls that change it. */
@@ -104,27 +105,24 @@ export default async function AdminAgencyPage(
       <div className="admin-cols">
         <div>
           {agent ? (
-            <EditAgentForm
-              agent={{
-                id: agent.id,
-                name: agent.name,
-                provider: agent.provider,
-                provider_agent_id: agent.provider_agent_id,
-                phone_number: agent.phone_number,
-                voice_desc: agent.voice_desc,
-                languages: agent.languages ?? [],
-                status: agent.status,
-                webhook_token: agent.webhook_token,
-              }}
-            />
+            <>
+              <LinkStatus agent={agent} />
+              <EditAgentForm
+                agent={{
+                  id: agent.id,
+                  name: agent.name,
+                  provider: agent.provider,
+                  provider_agent_id: agent.provider_agent_id,
+                  phone_number: agent.phone_number,
+                  voice_desc: agent.voice_desc,
+                  languages: agent.languages ?? [],
+                  status: agent.status,
+                  webhook_token: agent.webhook_token,
+                }}
+              />
+            </>
           ) : (
-            <div className="card card-pad empty">
-              <b>No voice agent yet</b>
-              <p>
-                This agency has no agent record, so no calls can reach it. Add
-                one once it is built in the provider console.
-              </p>
-            </div>
+            <ConnectAgent tenantId={tenant.id} />
           )}
         </div>
 
@@ -179,5 +177,65 @@ export default async function AdminAgencyPage(
         </aside>
       </div>
     </>
+  );
+}
+
+/**
+ * Whether this agent is actually reachable by Voxline, as distinct from
+ * described in it. Reads the three linking columns and says so plainly — the
+ * whole point of them is that "no calls" stops being the only symptom.
+ */
+function LinkStatus({
+  agent,
+}: {
+  agent: {
+    provider: string;
+    provider_deployment_id: string | null;
+    linked_at: string | null;
+    webhook_verified_at: string | null;
+    last_synced_at: string | null;
+  };
+}) {
+  const verified = Boolean(agent.webhook_verified_at);
+  const fmt = (iso: string | null) => (iso ? new Date(iso).toLocaleString() : "—");
+
+  return (
+    <section className={`card card-pad ${verified ? "" : "notice"}`}>
+      <div className="card-head">
+        <div>
+          <h3>{verified ? "Webhook verified" : "Webhook not verified"}</h3>
+          <span className="card-sub">
+            {verified
+              ? `${agent.provider} confirmed it will post finished calls to Voxline.`
+              : agent.provider === "sarvam"
+                ? "Sarvam has not confirmed a webhook for this agent. Calls will not reach the portal, and the agent cannot go live until it does. Use the Webhooks tab to set it by hand, or re-connect the deployment."
+                : "This agent was wired before verification existed. Check its URL on the Webhooks tab."}
+          </span>
+        </div>
+        <span className={`badge ${verified ? "ok" : "acc"}`}>
+          {verified ? "linked" : "unlinked"}
+        </span>
+      </div>
+      <ul className="admin-members">
+        {agent.provider_deployment_id && (
+          <li>
+            <span>Deployment</span>
+            <span className="mono">{agent.provider_deployment_id}</span>
+          </li>
+        )}
+        <li>
+          <span>Linked</span>
+          <span>{fmt(agent.linked_at)}</span>
+        </li>
+        <li>
+          <span>Webhook verified</span>
+          <span>{fmt(agent.webhook_verified_at)}</span>
+        </li>
+        <li>
+          <span>Last synced</span>
+          <span>{fmt(agent.last_synced_at)}</span>
+        </li>
+      </ul>
+    </section>
   );
 }
