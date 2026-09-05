@@ -127,7 +127,7 @@ export async function ingestCall(call: NormalisedCall): Promise<IngestResult> {
   // written into a competitor's portal.
   const { data: agent, error: agentError } = await supabase
     .from("voice_agents")
-    .select("id, tenant_id, vertical")
+    .select("id, tenant_id, vertical, credential_ref")
     .eq("provider", call.provider)
     .eq("provider_agent_id", call.providerAgentId)
     .maybeSingle();
@@ -238,7 +238,14 @@ export async function ingestCall(call: NormalisedCall): Promise<IngestResult> {
         await retrySarvamRecording(saved.id, true);
       } else {
         const path = await storeRecording({
-          source: call.recording,
+          // Which credential fetches this audio is a property of the AGENT,
+          // not of the payload, so the adapter cannot know it — ElevenLabs
+          // keys are workspace-scoped and our two clients are in different
+          // workspaces. Attached here, where the agent row is already loaded.
+          source:
+            call.recording.kind === "elevenlabs"
+              ? { ...call.recording, credentialRef: agent.credential_ref }
+              : call.recording,
           tenantId: agent.tenant_id,
           provider: call.provider,
           providerCallId: call.providerCallId,

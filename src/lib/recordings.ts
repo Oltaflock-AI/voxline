@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Database } from "@/lib/supabase/database.types";
+import { elevenLabsApiKey } from "@/lib/providers/elevenlabs-credentials";
 
 type VoiceProvider = Database["public"]["Enums"]["voice_provider"];
 
@@ -45,7 +46,29 @@ export type RecordingSource =
    * so this carries the id rather than the dead URL. Same reasoning as Sarvam:
    * an adapter reports where audio can be OBTAINED, not a link to it.
    */
-  | { kind: "vapi"; callId: string };
+  | { kind: "vapi"; callId: string }
+  /**
+   * ElevenLabs: audio arrives TWICE, and neither way is a URL.
+   *
+   * `post_call_audio` pushes the MP3 inline as base64 on a separate delivery,
+   * and there is an authenticated endpoint keyed by conversation id. We use
+   * the endpoint, for two reasons that each settle it on their own:
+   *
+   *   * base64 inflates by a third, and the platform rejects an oversized
+   *     request body before any handler runs — so the inline route would lose
+   *     audio precisely on the longest calls, which are the best leads.
+   *   * a backfilled conversation never re-emits that event, so the fetch path
+   *     is needed regardless. Inline would be a second path, not a substitute.
+   *
+   * The key is per workspace, so this carries the agent's credential_ref
+   * rather than reading a fixed environment variable — Rise & Shine's agent
+   * and Sarthak's are in different ElevenLabs workspaces.
+   */
+  | {
+      kind: "elevenlabs";
+      conversationId: string;
+      credentialRef?: string | null;
+    };
 
 export function recordingPathFor(
   tenantId: string,
@@ -216,6 +239,49 @@ async function fetchVapiRecording(
   return null;
 }
 
+/**
+ * ElevenLabs audio, from the authenticated conversation endpoint.
+ *
+ * GET /v1/convai/conversations/{id}/audio with an `xi-api-key` header, which
+ * answers with the bytes directly — no redirect dance, unlike Vapi.
+ *
+ * KNOWN LIMITATION, worth knowing before reading a failure as a credential
+ * problem: ElevenLabs finalises audio a moment after the transcript webhook
+ * fires, so a very fresh conversation can 404 here. `retrySarvamRecording` is
+ * Sarvam-only, so ElevenLabs gets one attempt and then `recording_status` is
+ * "failed" for good. Generalising that retry is the next thing to do here if
+ * the backfill shows 404s; it is a bigger change than it looks, because that
+ * function is also what the audio player polls.
+ */
+async function fetchElevenLabsRecording(
+  source: Extract<RecordingSource, { kind: "elevenlabs" }>
+): Promise<Blob | null> {
+  const key = elevenLabsApiKey(source.credentialRef);
+  if (!key) {
+    // Loud, unlike Vapi's equivalent: a missing key here usually means the
+    // agent's credential_ref names a workspace nobody configured, which is a
+    // setup mistake rather than a deployment without the integration.
+    console.error(
+      `[recordings] no ElevenLabs key for credential_ref ${JSON.stringify(source.credentialRef ?? null)} — skipping recording fetch`
+    );
+    return null;
+  }
+
+  const endpoint = `https://api.elevenlabs.io/v1/convai/conversations/${encodeURIComponent(source.conversationId)}/audio`;
+  const res = await fetch(endpoint, {
+    headers: { "xi-api-key": key },
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+  });
+
+  if (!res.ok) {
+    console.error(
+      `[recordings] elevenlabs ${res.status} for conversation ${source.conversationId}`
+    );
+    return null;
+  }
+  return await res.blob();
+}
+
 async function fetchUrl(url: string): Promise<Blob | null> {
   const res = await fetch(url, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
   if (!res.ok) {
@@ -254,6 +320,9 @@ export async function storeRecording(args: {
         break;
       case "vapi":
         audio = await fetchVapiRecording(source);
+        break;
+      case "elevenlabs":
+        audio = await fetchElevenLabsRecording(source);
         break;
     }
   } catch (err) {

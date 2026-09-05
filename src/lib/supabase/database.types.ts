@@ -556,6 +556,7 @@ export type Database = {
           after_hours_behavior: string | null
           business_hours: Json
           created_at: string
+          credential_ref: string | null
           crm_connection: Json
           escalation_number: string | null
           id: string
@@ -573,6 +574,9 @@ export type Database = {
           tenant_id: string
           vertical: Database["public"]["Enums"]["agent_vertical"]
           voice_desc: string | null
+          webhook_forward_last_at: string | null
+          webhook_forward_last_status: number | null
+          webhook_forward_url: string | null
           webhook_token: string | null
           webhook_verified_at: string | null
         }
@@ -580,6 +584,7 @@ export type Database = {
           after_hours_behavior?: string | null
           business_hours?: Json
           created_at?: string
+          credential_ref?: string | null
           crm_connection?: Json
           escalation_number?: string | null
           id?: string
@@ -597,6 +602,9 @@ export type Database = {
           tenant_id: string
           vertical?: Database["public"]["Enums"]["agent_vertical"]
           voice_desc?: string | null
+          webhook_forward_last_at?: string | null
+          webhook_forward_last_status?: number | null
+          webhook_forward_url?: string | null
           webhook_token?: string | null
           webhook_verified_at?: string | null
         }
@@ -604,6 +612,7 @@ export type Database = {
           after_hours_behavior?: string | null
           business_hours?: Json
           created_at?: string
+          credential_ref?: string | null
           crm_connection?: Json
           escalation_number?: string | null
           id?: string
@@ -621,6 +630,9 @@ export type Database = {
           tenant_id?: string
           vertical?: Database["public"]["Enums"]["agent_vertical"]
           voice_desc?: string | null
+          webhook_forward_last_at?: string | null
+          webhook_forward_last_status?: number | null
+          webhook_forward_url?: string | null
           webhook_token?: string | null
           webhook_verified_at?: string | null
         }
