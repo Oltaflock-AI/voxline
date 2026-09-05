@@ -168,4 +168,31 @@ test.describe("admin console works", () => {
     await expect(page.getByRole("button", { name: "Pause agent" })).toBeEnabled();
     await expect(page.getByRole("button", { name: "Verify webhook" })).toBeVisible();
   });
+
+  test("a paused, unverified Sarvam agent cannot be resumed", async ({ page }) => {
+    // The seeded agent is already live, so it cannot exercise the disabled
+    // Resume button — the state this gate exists for. Build that state: a
+    // paused Sarvam agent with no webhook_verified_at, which is exactly what
+    // every agent created before the linking columns existed looks like.
+    const suffix = Date.now().toString(36);
+    const { data: tenant } = await admin()
+      .from("tenants")
+      .insert({ name: "Paused Unverified", slug: `paused-${suffix}`, initials: "PU" })
+      .select("id")
+      .single();
+
+    await admin().from("voice_agents").insert({
+      tenant_id: tenant!.id,
+      name: "Unverified Line",
+      provider: "sarvam",
+      provider_agent_id: `app-paused-${suffix}`,
+      status: "paused",
+    });
+
+    await page.goto(`/admin/agencies/${tenant!.id}`);
+
+    const resume = page.getByRole("button", { name: "Resume agent" });
+    await expect(resume).toBeDisabled();
+    await expect(resume).toHaveAttribute("title", "Verify the Sarvam webhook first");
+  });
 });
