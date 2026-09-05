@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState, useTransition } from "react";
+import { useActionState, useEffect, useState, useTransition, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useFormStatus } from "react-dom";
 import {
@@ -32,9 +32,11 @@ function LinkButton() {
  * That is the deal the spec makes: never a dead button, always the honest
  * path.
  *
- * Deployments are fetched on selection, not on mount: the list is a live call
- * to Sarvam, and an admin who opens an agency page to check a phone number
- * should not pay for it.
+ * Deployments are loaded only when the admin asks for them, via an explicit
+ * button — never on mount and never on provider change. The list is a live
+ * call to Sarvam: an admin opening an agency page to check a phone number
+ * should not trigger one, and the test suite (which visits this page a lot)
+ * must not hit Sarvam just by rendering.
  */
 export function ConnectAgent({ tenantId }: { tenantId: string }) {
   const router = useRouter();
@@ -45,12 +47,11 @@ export function ConnectAgent({ tenantId }: { tenantId: string }) {
 
   const caps = PROVIDER_CAPABILITIES[provider];
 
-  useEffect(() => {
-    if (!caps.connect) return;
+  const load = useCallback(() => {
     startLoading(async () => {
       setList(await listSarvamDeployments());
     });
-  }, [provider, caps.connect]);
+  }, []);
 
   useEffect(() => {
     // The server action revalidated the page; refresh so the agent card
@@ -96,6 +97,15 @@ export function ConnectAgent({ tenantId }: { tenantId: string }) {
 
       {caps.connect && (
         <>
+          <button
+            type="button"
+            className="btn-ghost sm"
+            onClick={load}
+            disabled={loading}
+          >
+            {loading ? "Loading…" : list ? "Reload deployments" : "Load deployments from Sarvam"}
+          </button>
+
           {loading && <p className="admin-muted">Loading deployments from Sarvam…</p>}
 
           {!loading && list?.error && (
