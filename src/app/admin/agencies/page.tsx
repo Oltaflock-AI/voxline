@@ -78,7 +78,20 @@ export default async function AdminAgenciesPage(
           </thead>
           <tbody>
             {(tenants ?? []).map((t) => {
-              const agent = t.voice_agents?.[0];
+              // An agency can have several agents — one per property, in
+              // Sarthak Singapore's case. This table stays one row per agency
+              // to keep it scannable, so it shows the first and says how many
+              // more; the detail page lists them all. Sorted, because the
+              // embed comes back unordered and "the first one" should at least
+              // be the same one on every render.
+              const allAgents = [...(t.voice_agents ?? [])].sort((a, b) =>
+                a.name.localeCompare(b.name)
+              );
+              const agent = allAgents[0];
+              const extra = allAgents.length - 1;
+              const liveCount = allAgents.filter(
+                (a) => a.status === "live"
+              ).length;
               return (
                 <tr key={t.id}>
                   <td data-label="Agency">
@@ -93,6 +106,9 @@ export default async function AdminAgenciesPage(
                     {agent ? (
                       <>
                         {agent.name}
+                        {extra > 0 && (
+                          <span className="admin-muted"> +{extra} more</span>
+                        )}
                         <br />
                         <span className={`badge ${agent.provider === "sarvam" ? "acc" : ""}`}>
                           {agent.provider}
@@ -102,7 +118,11 @@ export default async function AdminAgenciesPage(
                       <span className="admin-muted">No agent yet</span>
                     )}
                   </td>
-                  <td className="mono" data-label="Number">{agent?.phone_number ?? "Not set"}</td>
+                  <td className="mono" data-label="Number">
+                    {extra > 0
+                      ? `${allAgents.filter((a) => a.phone_number).length} numbers`
+                      : (agent?.phone_number ?? "Not set")}
+                  </td>
                   <td data-label="Users">
                     {t.memberships?.length ?? 0}
                     {(t.memberships?.length ?? 0) === 0 && (
@@ -113,16 +133,29 @@ export default async function AdminAgenciesPage(
                     )}
                   </td>
                   <td className="r" data-label="Status">
-                    {agent ? (
+                    {!agent ? (
+                      "No agent"
+                    ) : extra > 0 ? (
+                      <span className={`badge ${liveCount > 0 ? "ok" : ""}`}>
+                        {liveCount} of {allAgents.length} live
+                      </span>
+                    ) : (
                       <span className={`badge ${agent.status === "live" ? "ok" : ""}`}>
                         {agent.status}
                       </span>
-                    ) : (
-                      "No agent"
                     )}
                   </td>
                   <td className="r">
-                    {agent && (
+                    {/* Pause/Resume only when there is one agent to act on. A
+                        single button that pauses an arbitrary one of three
+                        lines is a foot-gun; with several, the detail page has
+                        a button per agent. */}
+                    {agent && extra > 0 && (
+                      <Link className="btn-ghost sm" href={`/admin/agencies/${t.id}`}>
+                        Manage
+                      </Link>
+                    )}
+                    {agent && extra === 0 && (
                       <form action={setAgentStatus}>
                         <input type="hidden" name="agentId" value={agent.id} />
                         <input

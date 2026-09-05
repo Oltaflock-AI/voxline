@@ -26,7 +26,13 @@ export default async function AdminAgencyPage(
 
   if (!tenant) notFound();
 
-  const agent = tenant.voice_agents?.[0] ?? null;
+  // Every agent, sorted, because the embed comes back unordered and an agency
+  // can have several — Sarthak Singapore runs one per property. Taking [0] hid
+  // the rest completely: they received calls, appeared on the Webhooks page,
+  // and were invisible here.
+  const agents = [...(tenant.voice_agents ?? [])].sort((a, b) =>
+    a.name.localeCompare(b.name)
+  );
 
   const [{ count: callCount }, { count: leadCount }, { data: usage }, { data: requests }] =
     await Promise.all([
@@ -79,33 +85,7 @@ export default async function AdminAgencyPage(
             {new Date(tenant.created_at).toLocaleDateString()}
           </p>
         </div>
-        {agent && (
-          <form action={setAgentStatus}>
-            <input type="hidden" name="agentId" value={agent.id} />
-            <input
-              type="hidden"
-              name="status"
-              value={agent.status === "live" ? "paused" : "live"}
-            />
-            {(() => {
-              const canGoLive = !(
-                agent.provider === "sarvam" && !agent.webhook_verified_at
-              );
-              const disabled = agent.status !== "live" && !canGoLive;
-              return (
-                <button
-                  className={agent.status === "live" ? "btn-ghost sm" : "btn sm"}
-                  type="submit"
-                  disabled={disabled}
-                  aria-disabled={disabled}
-                  title={disabled ? "Verify the Sarvam webhook first" : undefined}
-                >
-                  {agent.status === "live" ? "Pause agent" : "Resume agent"}
-                </button>
-              );
-            })()}
-          </form>
-        )}
+        {agents.length === 1 && <AgentStatusButton agent={agents[0]} />}
       </div>
 
       <div className="admin-stats">
@@ -119,8 +99,14 @@ export default async function AdminAgencyPage(
 
       <div className="admin-cols">
         <div>
-          {agent ? (
-            <>
+          {agents.map((agent) => (
+            <div key={agent.id}>
+              {agents.length > 1 && (
+                <div className="card-head" style={{ alignItems: "center" }}>
+                  <h3>{agent.name}</h3>
+                  <AgentStatusButton agent={agent} />
+                </div>
+              )}
               <LinkStatus agent={agent} />
               <EditAgentForm
                 agent={{
@@ -135,10 +121,14 @@ export default async function AdminAgencyPage(
                   webhook_token: agent.webhook_token,
                 }}
               />
-            </>
-          ) : (
-            <ConnectAgent tenantId={tenant.id} />
-          )}
+            </div>
+          ))}
+
+          {/* Always rendered, not only when the agency has no agent. Adding a
+              second line is a normal thing to want — a developer gets an agent
+              per project — and the old `agent ? … : Connect` made that
+              impossible from the console once the first one existed. */}
+          <ConnectAgent tenantId={tenant.id} />
         </div>
 
         <aside className="admin-side">
@@ -200,6 +190,46 @@ export default async function AdminAgencyPage(
  * described in it. Reads the three linking columns and says so plainly — the
  * whole point of them is that "no calls" stops being the only symptom.
  */
+/**
+ * Pause or resume one agent.
+ *
+ * Extracted from the page header so it can render per agent. A Sarvam agent
+ * with no verified webhook cannot go live — the button is disabled with the
+ * reason in its title rather than hidden, so the path forward stays visible.
+ */
+function AgentStatusButton({
+  agent,
+}: {
+  agent: {
+    id: string;
+    provider: string;
+    status: string;
+    webhook_verified_at: string | null;
+  };
+}) {
+  const canGoLive = !(agent.provider === "sarvam" && !agent.webhook_verified_at);
+  const disabled = agent.status !== "live" && !canGoLive;
+  return (
+    <form action={setAgentStatus}>
+      <input type="hidden" name="agentId" value={agent.id} />
+      <input
+        type="hidden"
+        name="status"
+        value={agent.status === "live" ? "paused" : "live"}
+      />
+      <button
+        className={agent.status === "live" ? "btn-ghost sm" : "btn sm"}
+        type="submit"
+        disabled={disabled}
+        aria-disabled={disabled}
+        title={disabled ? "Verify the Sarvam webhook first" : undefined}
+      >
+        {agent.status === "live" ? "Pause agent" : "Resume agent"}
+      </button>
+    </form>
+  );
+}
+
 function LinkStatus({
   agent,
 }: {

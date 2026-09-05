@@ -122,9 +122,25 @@ export async function linkSarvamDeployment(
     };
   }
 
-  // 1b. Write the row. Update the tenant's existing Sarvam agent if there is
-  // one — an agency has one line, and re-linking should repair it, not add a
-  // second. Insert otherwise. The webhook token comes from the column default.
+  // 1b. Write the row. Update THIS deployment's agent if the tenant already
+  // has it, insert otherwise. The webhook token comes from the column default.
+  //
+  // Keyed on the deployment, not on (tenant, provider). The old version asked
+  // "does this tenant have a Sarvam agent" because an agency was assumed to
+  // have one line — and that assumption broke twice over:
+  //
+  //   * It could not tell "re-link the same deployment" (repair the row) from
+  //     "link a second deployment" (add an agent). Both looked identical.
+  //   * With two Sarvam agents on one tenant, `.maybeSingle()` over two rows
+  //     makes PostgREST answer 406, so `data` came back null, the code took the
+  //     insert branch, and the insert then tripped the unique index on
+  //     (provider, provider_agent_id). An agency with two lines could not link
+  //     either of them.
+  //
+  // Sarthak Singapore is one client with an agent per property, so this is now
+  // the normal case rather than the exotic one. `owner` above already resolved
+  // the row by (provider, provider_agent_id) — the actual unique index — so
+  // reuse it rather than asking a second, weaker question.
   const fields = {
     name: deployment.name ?? `Sarvam ${deployment.deployment_id}`,
     provider: "sarvam" as const,
@@ -133,12 +149,7 @@ export async function linkSarvamDeployment(
     phone_number: deployment.phone_numbers[0] ?? null,
   };
 
-  const { data: existing } = await admin
-    .from("voice_agents")
-    .select("id")
-    .eq("tenant_id", input.tenantId)
-    .eq("provider", "sarvam")
-    .maybeSingle();
+  const existing = owner && owner.tenant_id === input.tenantId ? owner : null;
 
   const write = existing
     ? admin.from("voice_agents").update(fields).eq("id", existing.id)

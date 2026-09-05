@@ -29,7 +29,7 @@ export default async function TenantLayout(props: LayoutProps<"/app/[tenant]">) 
   // Explicit .eq() on tenant_id even though RLS already scopes these:
   // AGENTS.md ground rule, "RLS is the enforcement layer; queries still
   // filter explicitly." Belt and braces, and it keeps the intent readable.
-  const [{ count: callCount }, { count: leadCount }, { data: agent }] =
+  const [{ count: callCount }, { count: leadCount }, { data: agents }] =
     await Promise.all([
       supabase
         .from("calls")
@@ -39,15 +39,32 @@ export default async function TenantLayout(props: LayoutProps<"/app/[tenant]">) 
         .from("leads")
         .select("id", { count: "exact", head: true })
         .eq("tenant_id", tenant.id),
+      // Every agent, not `.limit(1)`. An agency can run several lines — one
+      // per property, in Sarthak Singapore's case — and the old query returned
+      // an arbitrary one of them with no ORDER BY. It never errored: it just
+      // reported "Agent paused" or "Agent live" depending on which row
+      // Postgres happened to hand back, which is a worse failure than a crash
+      // because nothing anywhere says it happened.
       supabase
         .from("voice_agents")
         .select("status")
-        .eq("tenant_id", tenant.id)
-        .limit(1)
-        .maybeSingle(),
+        .eq("tenant_id", tenant.id),
     ]);
 
-  const agentLive = agent?.status === "live";
+  // One live agent means the phone is answered, so `some` is the honest
+  // predicate for the pill. The count is what makes it legible on an agency
+  // with several: "1 of 3 live" tells you something "Agent live" hides.
+  const agentList = agents ?? [];
+  const liveCount = agentList.filter((a) => a.status === "live").length;
+  const agentLive = liveCount > 0;
+  const agentStatusLabel =
+    agentList.length === 0
+      ? "No agent yet"
+      : agentList.length === 1
+        ? agentLive
+          ? "Agent live"
+          : "Agent paused"
+        : `${liveCount} of ${agentList.length} live`;
 
   return (
     <ToastProvider>
@@ -80,7 +97,7 @@ export default async function TenantLayout(props: LayoutProps<"/app/[tenant]">) 
           <div className="topbar-right">
             <div className="status-pill">
               {agentLive && <WaveLoader />}{" "}
-              <span>{agentLive ? "Agent live" : "Agent paused"}</span>
+              <span>{agentStatusLabel}</span>
             </div>
             <ThemeToggle />
           </div>
