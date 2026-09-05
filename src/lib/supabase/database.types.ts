@@ -557,16 +557,20 @@ export type Database = {
           escalation_number: string | null
           id: string
           languages: string[]
+          last_synced_at: string | null
+          linked_at: string | null
           name: string
           phone_number: string | null
           provider: Database["public"]["Enums"]["voice_provider"]
           provider_agent_id: string | null
+          provider_deployment_id: string | null
           qualification_questions: string[]
           recording_retention_months: number
           status: Database["public"]["Enums"]["agent_status"]
           tenant_id: string
           voice_desc: string | null
           webhook_token: string | null
+          webhook_verified_at: string | null
         }
         Insert: {
           after_hours_behavior?: string | null
@@ -576,16 +580,20 @@ export type Database = {
           escalation_number?: string | null
           id?: string
           languages?: string[]
+          last_synced_at?: string | null
+          linked_at?: string | null
           name: string
           phone_number?: string | null
           provider?: Database["public"]["Enums"]["voice_provider"]
           provider_agent_id?: string | null
+          provider_deployment_id?: string | null
           qualification_questions?: string[]
           recording_retention_months?: number
           status?: Database["public"]["Enums"]["agent_status"]
           tenant_id: string
           voice_desc?: string | null
           webhook_token?: string | null
+          webhook_verified_at?: string | null
         }
         Update: {
           after_hours_behavior?: string | null
@@ -595,16 +603,20 @@ export type Database = {
           escalation_number?: string | null
           id?: string
           languages?: string[]
+          last_synced_at?: string | null
+          linked_at?: string | null
           name?: string
           phone_number?: string | null
           provider?: Database["public"]["Enums"]["voice_provider"]
           provider_agent_id?: string | null
+          provider_deployment_id?: string | null
           qualification_questions?: string[]
           recording_retention_months?: number
           status?: Database["public"]["Enums"]["agent_status"]
           tenant_id?: string
           voice_desc?: string | null
           webhook_token?: string | null
+          webhook_verified_at?: string | null
         }
         Relationships: [
           {
