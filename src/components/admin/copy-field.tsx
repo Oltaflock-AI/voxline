@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 /**
  * A long value with a copy button.
@@ -11,25 +11,52 @@ import { useState } from "react";
  * bug rather than a copy that missed the end.
  */
 export function CopyField({ value, label }: { value: string; label: string }) {
-  const [copied, setCopied] = useState(false);
+  const [state, setState] = useState<"idle" | "copied" | "selected">("idle");
+  const codeRef = useRef<HTMLElement>(null);
 
+  /**
+   * Copy, and if that is refused, SELECT instead.
+   *
+   * The previous version swallowed the failure in silence on purpose, reasoning
+   * that the value was on screen and selectable anyway. In practice the button
+   * then does nothing at all when clicked, which reads as broken rather than as
+   * degraded — reported 2026-09-05.
+   *
+   * `navigator.clipboard` is refused more often than it looks: a non-HTTPS
+   * origin, a denied permission, an unfocused document, or an iframe without
+   * `clipboard-write`. The fallback selects the text so one keystroke finishes
+   * the job, and the label says which keystroke. Either way the button visibly
+   * responds.
+   */
   async function copy() {
     try {
       await navigator.clipboard.writeText(value);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      setState("copied");
     } catch {
-      // Clipboard access can be refused (insecure origin, denied permission).
-      // The value is on screen and selectable, so this is a lost convenience
-      // rather than a lost capability — say nothing and let them select it.
+      const node = codeRef.current;
+      if (node) {
+        const range = document.createRange();
+        range.selectNodeContents(node);
+        const sel = window.getSelection();
+        sel?.removeAllRanges();
+        sel?.addRange(range);
+      }
+      setState("selected");
     }
+    setTimeout(() => setState("idle"), 3000);
   }
+
+  const isMac =
+    typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
+  const shortcut = isMac ? "\u2318C" : "Ctrl+C";
 
   return (
     <div className="copy-field">
-      <code>{value}</code>
+      <code ref={codeRef}>{value}</code>
       <button type="button" onClick={copy} aria-label={`Copy ${label}`}>
-        {copied ? (
+        {state === "selected" ? (
+          <>Selected · press {shortcut}</>
+        ) : state === "copied" ? (
           <>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
               <path d="M20 6 9 17l-5-5" />

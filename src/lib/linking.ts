@@ -50,6 +50,32 @@ export function sarvamWebhookUrl(appUrl: string, token: string): string {
  * path shape rather than a bare hex run, so an unrelated 64-character id in a
  * payload is left readable.
  */
+/**
+ * Turn a failed webhook write into something a person can act on.
+ *
+ * The first real attempt said only "Sarvam rejected the webhook update", and an
+ * hour went into hunting an inbound-webhook limitation that platform_docs
+ * warned about. The actual reason was in the body all along:
+ *
+ *   "Only paused deployments can be edited. Current status: 'active'."
+ *
+ * A message that names the next action costs nothing and saves that hour. The
+ * 422 is matched on its text rather than its status because 422 is Sarvam's
+ * generic "Invalid Parameter" and will mean other things too; anything
+ * unrecognised keeps the old wording rather than guessing.
+ */
+export function describeSetWebhookFailure(e: unknown): string {
+  const saved = "The agent record was saved but is not linked.";
+  if (e instanceof SarvamClientError && /only paused deployments/i.test(e.body)) {
+    return (
+      "Sarvam only lets a PAUSED deployment be edited, and this one is active. " +
+      "Pause it in the Sarvam console, press Connect again, then resume it. " +
+      saved
+    );
+  }
+  return `Sarvam rejected the webhook update. ${saved}`;
+}
+
 export function redactWebhookToken(text: string): string {
   return text
     .replace(/(\/api\/webhooks\/[a-z]+\/)[A-Za-z0-9_-]{16,}/g, "$1<redacted>")
@@ -155,10 +181,7 @@ export async function linkSarvamDeployment(
       e instanceof Error ? e.message : e,
       e instanceof SarvamClientError ? `body=${redactWebhookToken(e.body)}` : ""
     );
-    return {
-      ok: false,
-      error: "Sarvam rejected the webhook update. The agent record was saved but is not linked.",
-    };
+    return { ok: false, error: describeSetWebhookFailure(e) };
   }
 
   const sameNumbers = (a: string[], b: string[]) =>

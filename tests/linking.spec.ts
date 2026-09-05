@@ -7,6 +7,7 @@ import type {
 } from "../src/lib/providers/sarvam-client";
 import { SarvamClientError } from "../src/lib/providers/sarvam-client";
 import {
+  describeSetWebhookFailure,
   linkSarvamDeployment,
   redactWebhookToken,
   sarvamWebhookUrl,
@@ -336,5 +337,34 @@ test.describe("redactWebhookToken", () => {
 
   test("caps the length so a huge body cannot flood the log", () => {
     expect(redactWebhookToken("x".repeat(5000)).length).toBe(1200);
+  });
+});
+
+/**
+ * The message a failed link shows. It is the only thing standing between a
+ * person and an hour of guessing, which is what the first vague version cost.
+ */
+test.describe("describeSetWebhookFailure", () => {
+  const activeBody = JSON.stringify({
+    error: {
+      message: "(422) Invalid Parameter",
+      code: 422,
+      data: { details: "Only paused deployments can be edited. Current status: 'active'." },
+    },
+  });
+
+  test("names the paused-deployment rule and the action to take", () => {
+    const msg = describeSetWebhookFailure(new SarvamClientError(422, activeBody, "https://x"));
+    expect(msg).toContain("PAUSED");
+    expect(msg).toContain("Pause it in the Sarvam console");
+  });
+
+  test("falls back to the generic wording for an unrecognised refusal", () => {
+    const other = new SarvamClientError(422, '{"error":{"data":{"details":"something else"}}}', "https://x");
+    expect(describeSetWebhookFailure(other)).toContain("Sarvam rejected the webhook update");
+  });
+
+  test("survives a non-Sarvam error without throwing", () => {
+    expect(describeSetWebhookFailure(new Error("boom"))).toContain("not linked");
   });
 });

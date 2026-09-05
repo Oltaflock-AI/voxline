@@ -15,8 +15,22 @@ import type { SarvamDeployment } from "@/lib/providers/sarvam-client";
 
 const initial: AdminFormState = { error: null, ok: false };
 
-function LinkButton() {
+/**
+ * Sarvam refuses to edit a running deployment: setting the webhook on an
+ * `active` one returns 422 every time. The list already knows each
+ * deployment's status, so offering the button anyway is offering a guaranteed
+ * failure — the spec's own rule for this panel is "never a dead button, always
+ * the honest state".
+ */
+function LinkButton({ blockedReason }: { blockedReason: string | null }) {
   const { pending } = useFormStatus();
+  if (blockedReason) {
+    return (
+      <button className="btn sm" type="button" disabled title={blockedReason}>
+        Connect
+      </button>
+    );
+  }
   return (
     <button className="btn sm" type="submit" disabled={pending}>
       {pending ? "Connecting…" : "Connect"}
@@ -156,6 +170,13 @@ function DeploymentRow({
       : "webhook → elsewhere"
     : "no webhook";
 
+  // Sarvam rejects a webhook write to a running deployment. Say so here rather
+  // than letting the click find out.
+  const blockedReason =
+    d.status === "active"
+      ? "Sarvam only allows edits to a paused deployment. Pause it in the Sarvam console, then Connect."
+      : null;
+
   return (
     <li>
       <span>
@@ -168,12 +189,20 @@ function DeploymentRow({
         <br />
         <span className={`badge ${d.webhook_url ? "" : "acc"}`}>{webhookState}</span>{" "}
         <span className="badge">{d.status ?? "unknown"}</span>
+        {blockedReason && (
+          <>
+            <br />
+            <span className="admin-muted" style={{ fontSize: "12px" }}>
+              Pause this deployment in Sarvam before connecting it.
+            </span>
+          </>
+        )}
       </span>
       <form action={action}>
         <input type="hidden" name="provider" value="sarvam" />
         <input type="hidden" name="tenantId" value={tenantId} />
         <input type="hidden" name="deploymentId" value={d.deployment_id} />
-        <LinkButton />
+        <LinkButton blockedReason={blockedReason} />
       </form>
     </li>
   );
