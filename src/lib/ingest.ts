@@ -8,7 +8,11 @@ import {
   type TranscriptTurn,
 } from "@/lib/calls";
 import { OUTCOMES_BY_VERTICAL } from "@/lib/outcomes";
-import { storeRecording, type RecordingSource } from "@/lib/recordings";
+import {
+  lastRecordingFailure,
+  storeRecording,
+  type RecordingSource,
+} from "@/lib/recordings";
 import { retrySarvamRecording } from "@/lib/recording-retry";
 
 export type VoiceProvider = Database["public"]["Enums"]["voice_provider"];
@@ -264,7 +268,12 @@ export async function ingestCall(call: NormalisedCall): Promise<IngestResult> {
                   recording_status: "failed",
                   recording_attempts: 1,
                   recording_next_retry_at: null,
-                  recording_last_error: "Provider recording download failed",
+                  // The specific reason, not a generic sentence. "elevenlabs
+                  // 401 (wrong or invalid API key for this workspace)" is
+                  // actionable from the admin console; "Provider recording
+                  // download failed" needed live log access to diagnose.
+                  recording_last_error:
+                    lastRecordingFailure() ?? "Provider recording download failed",
                 }
           )
           .eq("id", saved.id);

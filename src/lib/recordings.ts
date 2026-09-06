@@ -258,6 +258,7 @@ async function fetchElevenLabsRecording(
 ): Promise<Blob | null> {
   const key = elevenLabsApiKey(source.credentialRef);
   if (!key) {
+    lastFailure = `no ElevenLabs key for workspace ${source.credentialRef ?? "(default)"}`;
     // Loud, unlike Vapi's equivalent: a missing key here usually means the
     // agent's credential_ref names a workspace nobody configured, which is a
     // setup mistake rather than a deployment without the integration.
@@ -274,6 +275,11 @@ async function fetchElevenLabsRecording(
   });
 
   if (!res.ok) {
+    // 401 here means the key in the environment is not the key that can read
+    // this workspace — the failure that took an hour to find once, because the
+    // status code lived only in a streamed log while the database said
+    // "Provider recording download failed".
+    lastFailure = `elevenlabs ${res.status}${res.status === 401 ? " (wrong or invalid API key for this workspace)" : ""}`;
     console.error(
       `[recordings] elevenlabs ${res.status} for conversation ${source.conversationId}`
     );
@@ -299,6 +305,22 @@ async function fetchUrl(url: string): Promise<Blob | null> {
  * webhook: the provider would retry the whole delivery over an asset that is
  * secondary to the call record itself.
  */
+/**
+ * Why the most recent storeRecording() call failed, in a few words.
+ *
+ * A module-level variable rather than a return value because storeRecording
+ * returns a path-or-null and every caller treats null as "no audio yet" — the
+ * REASON was being thrown away, so the database recorded the same generic
+ * sentence whether the key was wrong, the provider was down, or the audio
+ * simply was not ready. Read it immediately after the call; it is overwritten
+ * by the next one.
+ */
+let lastFailure: string | null = null;
+
+export function lastRecordingFailure(): string | null {
+  return lastFailure;
+}
+
 export async function storeRecording(args: {
   source: RecordingSource;
   tenantId: string;
@@ -306,6 +328,7 @@ export async function storeRecording(args: {
   providerCallId: string;
 }): Promise<string | null> {
   const { source, tenantId, provider, providerCallId } = args;
+  lastFailure = null;
 
   let audio: Blob | null = null;
   try {
@@ -326,11 +349,17 @@ export async function storeRecording(args: {
         break;
     }
   } catch (err) {
+    lastFailure = err instanceof Error ? `fetch threw: ${err.message}` : "fetch threw";
     console.error("[recordings] fetch threw", err);
     return null;
   }
 
-  if (!audio || audio.size === 0) return null;
+  if (!audio || audio.size === 0) {
+    // Silent before this: a zero-byte body returned null with no log and no
+    // reason, which is indistinguishable from every other failure.
+    lastFailure = lastFailure ?? "provider returned no audio";
+    return null;
+  }
 
   const path = recordingPathFor(tenantId, provider, providerCallId);
   const { error } = await createAdminClient()
