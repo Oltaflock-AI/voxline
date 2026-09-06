@@ -861,7 +861,25 @@ function elevenLabsSignature(body: string, secret: string, tsSecs: number) {
   return `t=${tsSecs},v0=${digest}`;
 }
 
-function elevenLabsPayload(agentId: string, conversationId: string) {
+/**
+ * A minimal post_call_transcription body. Loosely typed on purpose: tests mutate
+ * it to model agents that collect nothing, dials that never connected, and
+ * transcripts carrying tool results, and an inferred literal type makes every
+ * one of those a compile error rather than a test.
+ */
+type TestPayload = {
+  type: string;
+  event_timestamp: number;
+  data: {
+    agent_id: string;
+    conversation_id: string;
+    transcript: Record<string, unknown>[];
+    metadata: Record<string, unknown>;
+    analysis: Record<string, unknown>;
+  };
+};
+
+function elevenLabsPayload(agentId: string, conversationId: string): TestPayload {
   return {
     type: "post_call_transcription",
     event_timestamp: Math.floor(Date.now() / 1000),
@@ -1092,7 +1110,7 @@ test.describe("ElevenLabs ingestion", () => {
           }),
         },
       ],
-    } as never);
+    });
 
     try {
       const res = await postElevenLabs(scratch.webhookToken, payload);
@@ -1124,7 +1142,7 @@ test.describe("ElevenLabs ingestion", () => {
       tool_results: [
         { tool_name: "calcom_create_booking", is_error: true, result_value: "no slot" },
       ],
-    } as never);
+    });
 
     try {
       await postElevenLabs(scratch.webhookToken, payload);
