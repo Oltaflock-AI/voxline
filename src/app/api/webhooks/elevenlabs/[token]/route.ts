@@ -114,7 +114,7 @@ export async function POST(
   const supabase = createAdminClient();
   const { data: agents, error: lookupError } = await supabase
     .from("voice_agents")
-    .select("id, provider_agent_id, webhook_token, credential_ref, webhook_forward_url")
+    .select("id, tenant_id, provider_agent_id, webhook_token, credential_ref, webhook_forward_url")
     .eq("provider", "elevenlabs")
     .not("webhook_token", "is", null);
 
@@ -222,23 +222,51 @@ export async function POST(
     return NextResponse.json({ ok: true, ignored: `event ${eventType ?? "unknown"}` });
   }
 
-  // The token proves which agent is calling. A body claiming a different agent
-  // means a misconfigured webhook or a forged payload, and guessing which
-  // would write a call into the wrong tenant.
+  // --- which agent is this call for? ---------------------------------------
+  //
+  // ONE WEBHOOK PER WORKSPACE, NOT PER AGENT. This is where ElevenLabs differs
+  // from Sarvam and Vapi, and the difference is structural rather than
+  // cosmetic: their webhook endpoint belongs to a WORKSPACE and each agent
+  // selects one, so Sarthak Singapore's three agents all deliver through a
+  // single URL — and a Voxline URL carries a token that names one agent.
+  //
+  // So the token cannot mean "this exact agent" here. It means "an agent of
+  // this agency, in this ElevenLabs workspace", and the body's `agent_id` says
+  // which one. Both halves are still checked:
+  //
+  //   * the HMAC proves ElevenLabs sent it, using the workspace's own secret
+  //   * the claimed agent must belong to the SAME TENANT as the token's agent
+  //
+  // That second check is what keeps the old guarantee. A forged or
+  // misconfigured `agent_id` can at worst move a call between two lines of the
+  // agency that already owns the token — it can never write into another
+  // agency's portal, which is the thing spec §11 decision 1 exists to prevent.
   const claimed = payload.data?.agent_id;
+  let ingestAgentId = agent.provider_agent_id;
+
   if (claimed && claimed !== agent.provider_agent_id) {
-    console.error(
-      `[elevenlabs] agent mismatch: token belongs to ${agent.provider_agent_id}, body claims ${claimed}`
-    );
-    return NextResponse.json({ error: "agent mismatch" }, { status: 401 });
+    const { data: sibling } = await supabase
+      .from("voice_agents")
+      .select("provider_agent_id, tenant_id")
+      .eq("provider", "elevenlabs")
+      .eq("provider_agent_id", claimed)
+      .maybeSingle();
+
+    if (!sibling || sibling.tenant_id !== agent.tenant_id) {
+      console.error(
+        `[elevenlabs] agent mismatch: token belongs to tenant ${agent.tenant_id}, body claims agent ${claimed}`
+      );
+      return NextResponse.json({ error: "agent mismatch" }, { status: 401 });
+    }
+    ingestAgentId = sibling.provider_agent_id;
   }
 
   const normalised = normaliseElevenLabsCall({
     ...payload,
     data: {
       ...(payload.data ?? {}),
-      // Trust the token's agent over the body's.
-      agent_id: agent.provider_agent_id ?? claimed,
+      // Resolved above, never taken raw from the body.
+      agent_id: ingestAgentId ?? claimed,
     },
   });
 

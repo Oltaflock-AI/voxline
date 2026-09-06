@@ -951,7 +951,7 @@ test.describe("ElevenLabs ingestion", () => {
     }
   });
 
-  test("rejects a body claiming a different agent", async () => {
+  test("rejects a body claiming an agent from another agency", async () => {
     const scratch = await makeElevenLabsTenant("mismatch");
     try {
       const res = await postElevenLabs(
@@ -959,6 +959,58 @@ test.describe("ElevenLabs ingestion", () => {
         elevenLabsPayload("agent_someone_else", "conv_mismatch")
       );
       expect(res.status).toBe(401);
+    } finally {
+      await scratch.cleanup();
+    }
+  });
+
+  test("one workspace webhook serves every agent of that agency", async () => {
+    /**
+     * An ElevenLabs webhook belongs to a WORKSPACE and each agent selects it,
+     * so Sarthak Singapore's three agents all deliver through one URL — while a
+     * Voxline URL carries a token naming one agent. The token therefore means
+     * "an agent of this agency", and the body says which.
+     *
+     * What must still hold: the call lands on the agent the BODY names, not the
+     * one the token names, and never outside the tenant.
+     */
+    const scratch = await makeElevenLabsTenant("workspace");
+    const db = admin();
+    const siblingAgentId = `agent_sibling_${crypto.randomBytes(6).toString("hex")}`;
+
+    const { data: sibling, error } = await db
+      .from("voice_agents")
+      .insert({
+        tenant_id: scratch.tenantId,
+        provider: "elevenlabs",
+        provider_agent_id: siblingAgentId,
+        name: "Second property line",
+        vertical: "real_estate",
+        status: "live",
+      })
+      .select("id")
+      .single();
+    if (error) throw error;
+
+    try {
+      const conversationId = `conv_${crypto.randomBytes(6).toString("hex")}`;
+      const res = await postElevenLabs(
+        // The FIRST agent's token…
+        scratch.webhookToken,
+        // …carrying the SECOND agent's call.
+        elevenLabsPayload(siblingAgentId, conversationId)
+      );
+      expect(res.status).toBe(200);
+
+      const { data: call } = await db
+        .from("calls")
+        .select("voice_agent_id, vertical")
+        .eq("provider_call_id", conversationId)
+        .single();
+
+      expect(call!.voice_agent_id).toBe(sibling.id);
+      // And it picked up that agent's vertical, not the token agent's.
+      expect(call!.vertical).toBe("real_estate");
     } finally {
       await scratch.cleanup();
     }
