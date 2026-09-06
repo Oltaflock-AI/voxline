@@ -53,11 +53,19 @@ export type ElevenLabsWebhookPayload = {
       role?: string;
       message?: string | null;
       time_in_call_secs?: number;
+      tool_results?: {
+        tool_name?: string;
+        is_error?: boolean;
+        result_value?: unknown;
+      }[];
     }[];
     metadata?: {
       call_duration_secs?: number | string;
       start_time_unix_secs?: number;
       termination_reason?: string;
+      features_usage?: {
+        transfer_to_number?: { used?: boolean } | null;
+      } | null;
       phone_call?: {
         direction?: string;
         external_number?: string | null;
@@ -186,6 +194,49 @@ function leadPhone(payload: ElevenLabsWebhookPayload): string | null {
 }
 
 /**
+ * Did the Cal.com booking tool actually return a booking?
+ *
+ * THE OUTCOME THAT MATTERS IS READ FROM A TOOL RESULT, NEVER FROM THE MODEL.
+ * A `site_visit_booked` extraction field fires on mere intent and on failed
+ * attempts alike — Sarthak Singapore's own dashboard says so in three separate
+ * comments, having learned it the expensive way — so a booking counts only when
+ * Cal.com handed back a uid.
+ *
+ * False when it cannot be verified. We never invent the fact.
+ */
+function bookingConfirmed(payload: ElevenLabsWebhookPayload): boolean {
+  for (const turn of payload.data?.transcript ?? []) {
+    for (const result of turn.tool_results ?? []) {
+      const name = String(result.tool_name ?? "").toLowerCase();
+      if (!name.includes("cal") || !name.includes("book")) continue;
+      if (result.is_error) continue;
+      try {
+        const parsed =
+          typeof result.result_value === "string"
+            ? JSON.parse(result.result_value)
+            : result.result_value;
+        const uid = (parsed as { data?: { uid?: unknown } })?.data?.uid;
+        if (uid) return true;
+      } catch {
+        /* unparseable is not a booking */
+      }
+    }
+  }
+  return false;
+}
+
+/**
+ * Did the call reach a human?
+ *
+ * `features_usage.transfer_to_number.used` is the provider's own record of
+ * whether the tool executed, which beats reading the transcript — an agent can
+ * narrate a transfer that never happened.
+ */
+function transferConfirmed(payload: ElevenLabsWebhookPayload): boolean {
+  return payload.data?.metadata?.features_usage?.transfer_to_number?.used === true;
+}
+
+/**
  * Turn a post-call delivery into the shape ingestCall() expects.
  * Returns null when this is not a finished call we can act on.
  */
@@ -268,12 +319,16 @@ export function normaliseElevenLabsCall(
     recording: { kind: "elevenlabs", conversationId: providerCallId },
     transcript: normaliseTranscript(payload, callerName),
     analysis,
-    // `outcome` is the agent's own data-collection field where one is
-    // configured. Rise & Shine's agent instead emits `lead_qualified`, a
-    // boolean, so it is folded in here rather than left to the duration
-    // heuristic. inferOutcome() still validates and falls back.
+    // Outcome, best evidence first.
+    //
+    // The two strongest signals are FACTS the provider reports, not fields the
+    // model filled in, and they are checked before anything else. That matters
+    // most for an agent with no data collection at all: Sarthak's agents book
+    // real site visits and emit no fields, so without this every one of those
+    // calls falls through the duration heuristic and lands on `not_a_fit` —
+    // the best outcome in the product, stored as the worst.
     outcome: inferOutcome(
-      vars.outcome ?? qualifiedFlagToOutcome(vars.lead_qualified),
+      outcomeHint(payload, vars, durationSeconds),
       analysis,
       durationSeconds
     ),
@@ -283,9 +338,45 @@ export function normaliseElevenLabsCall(
   };
 }
 
-/** Rise & Shine's `lead_qualified` boolean, as an outcome the enum knows. */
-function qualifiedFlagToOutcome(flag: unknown): string | undefined {
-  if (flag === true || flag === "true") return "inquiry_captured";
-  if (flag === false || flag === "false") return "not_a_fit";
+/**
+ * The best outcome we can justify, or undefined to let the heuristic decide.
+ *
+ * Order is evidence quality, not convenience:
+ *   1. a Cal.com booking uid           a fact, from the tool that made it
+ *   2. the transfer tool having fired  a fact, reported by the provider
+ *   3. the agent's own `outcome` field where data collection configures one
+ *   4. `lead_qualified`                Rise & Shine's boolean equivalent
+ *   5. `call_successful`               ElevenLabs' own verdict, and only on a
+ *                                      call long enough to have been one
+ *
+ * Step 5 is deliberately gated on duration. A two-second dial that nobody
+ * answered is reported as `failure`, and calling that "not a fit" claims we
+ * assessed someone we never spoke to — `voicemail`, which the heuristic
+ * returns, is the honest answer. Sarthak's history is roughly 500 of those.
+ */
+function outcomeHint(
+  payload: ElevenLabsWebhookPayload,
+  vars: Record<string, unknown>,
+  durationSeconds: number
+): string | undefined {
+  if (bookingConfirmed(payload)) return "site_visit_booked";
+  if (transferConfirmed(payload)) return "transferred_to_human";
+
+  if (typeof vars.outcome === "string" && vars.outcome.trim()) {
+    return vars.outcome.trim();
+  }
+
+  const qualified = vars.lead_qualified;
+  if (qualified === true || qualified === "true") return "inquiry_captured";
+  if (qualified === false || qualified === "false") return "not_a_fit";
+
+  if (durationSeconds >= 30) {
+    const verdict = String(
+      payload.data?.analysis?.call_successful ?? ""
+    ).toLowerCase();
+    if (verdict === "success") return "inquiry_captured";
+    if (verdict === "failure") return "not_a_fit";
+  }
+
   return undefined;
 }

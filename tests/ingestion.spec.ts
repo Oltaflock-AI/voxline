@@ -1059,6 +1059,113 @@ test.describe("ElevenLabs ingestion", () => {
     }
   });
 
+  test("a Cal.com tool result makes the outcome a booked site visit", async () => {
+    /**
+     * The whole point of reading tool results rather than a data-collection
+     * field. Sarthak's agents book real site visits and configure no fields at
+     * all, so without this every one of those calls falls through the duration
+     * heuristic and lands on `not_a_fit` — the best outcome in the product,
+     * stored as the worst.
+     */
+    const scratch = await makeElevenLabsTenant("booked");
+    const db = admin();
+    await db
+      .from("voice_agents")
+      .update({ vertical: "real_estate" })
+      .eq("id", scratch.agentId);
+
+    const conversationId = `conv_${crypto.randomBytes(6).toString("hex")}`;
+    const payload = elevenLabsPayload(scratch.providerAgentId, conversationId);
+    // No data collection at all, exactly like the live Sarthak agents.
+    payload.data.analysis.data_collection_results = {};
+    payload.data.metadata.call_duration_secs = 139;
+    payload.data.transcript.push({
+      role: "agent",
+      message: "अभी book कर रही हूँ…",
+      time_in_call_secs: 120,
+      tool_results: [
+        {
+          tool_name: "calcom_create_booking",
+          is_error: false,
+          result_value: JSON.stringify({
+            data: { uid: "abc123uid", start: "2026-09-08T05:30:00Z" },
+          }),
+        },
+      ],
+    } as never);
+
+    try {
+      const res = await postElevenLabs(scratch.webhookToken, payload);
+      expect(res.status).toBe(200);
+
+      const { data: call } = await db
+        .from("calls")
+        .select("outcome, lead_score")
+        .eq("provider_call_id", conversationId)
+        .single();
+
+      expect(call!.outcome).toBe("site_visit_booked");
+      // 45 for the booking, nothing for the brief, floor(139/20) = 6.
+      expect(call!.lead_score).toBe(51);
+    } finally {
+      await scratch.cleanup();
+    }
+  });
+
+  test("a failed booking attempt is not a booking", async () => {
+    const scratch = await makeElevenLabsTenant("bookfail");
+    const conversationId = `conv_${crypto.randomBytes(6).toString("hex")}`;
+    const payload = elevenLabsPayload(scratch.providerAgentId, conversationId);
+    payload.data.analysis.data_collection_results = {};
+    payload.data.transcript.push({
+      role: "agent",
+      message: "उस टाइम पर स्लॉट available नहीं है",
+      time_in_call_secs: 90,
+      tool_results: [
+        { tool_name: "calcom_create_booking", is_error: true, result_value: "no slot" },
+      ],
+    } as never);
+
+    try {
+      await postElevenLabs(scratch.webhookToken, payload);
+      const { data: call } = await admin()
+        .from("calls")
+        .select("outcome")
+        .eq("provider_call_id", conversationId)
+        .single();
+      expect(call!.outcome).not.toBe("site_visit_booked");
+    } finally {
+      await scratch.cleanup();
+    }
+  });
+
+  test("a two-second dial nobody answered is voicemail, not a verdict", async () => {
+    // ElevenLabs reports `failure` on these, and calling that "not a fit"
+    // claims we assessed someone we never spoke to. Sarthak's history is
+    // roughly 500 of them.
+    const scratch = await makeElevenLabsTenant("shortdial");
+    const conversationId = `conv_${crypto.randomBytes(6).toString("hex")}`;
+    const payload = elevenLabsPayload(scratch.providerAgentId, conversationId);
+    payload.data.analysis.data_collection_results = {};
+    payload.data.analysis.call_successful = "failure";
+    payload.data.metadata.call_duration_secs = 2;
+    payload.data.transcript = [
+      { role: "agent", message: "नमस्ते, मैं प्रिया…", time_in_call_secs: 0 },
+    ];
+
+    try {
+      await postElevenLabs(scratch.webhookToken, payload);
+      const { data: call } = await admin()
+        .from("calls")
+        .select("outcome")
+        .eq("provider_call_id", conversationId)
+        .single();
+      expect(call!.outcome).toBe("voicemail");
+    } finally {
+      await scratch.cleanup();
+    }
+  });
+
   test("accepts and ignores post_call_audio", async () => {
     // Audio is fetched from the conversation endpoint instead. Answering
     // anything but 200 would make ElevenLabs retry it forever.
