@@ -49,10 +49,27 @@ import {
  * FORWARDING. An ElevenLabs agent has exactly ONE post-call webhook, so
  * pointing it at Voxline takes it away from wherever it pointed before — for
  * Rise & Shine, their own dashboard. When `webhook_forward_url` is set we
- * re-POST the delivery there, byte for byte with the original signature
- * header, so their HMAC still verifies and nothing on their side changes.
- * VOXLINE IS THEREFORE LOAD-BEARING FOR ANOTHER SYSTEM whenever that column is
- * populated. It is empty by default.
+ * re-POST the delivery there, byte for byte, so the receiver sees exactly what
+ * ElevenLabs sent. VOXLINE IS THEREFORE LOAD-BEARING FOR ANOTHER SYSTEM
+ * whenever that column is populated. It is empty by default.
+ *
+ * THE SIGNATURE IS THE CATCH, and it is worth stating because the obvious plan
+ * does not work. A webhook endpoint's URL is IMMUTABLE — not editable in the
+ * console, and `PATCH /v1/workspace/webhooks/{id}` accepts only name,
+ * is_disabled, retry_enabled, request_headers and events (verified against the
+ * API reference, 2026-09-06). So pointing an agent at Voxline means creating a
+ * NEW endpoint, and a new endpoint generates a NEW signing secret.
+ *
+ * We forward the original `ElevenLabs-Signature` header unchanged, which means
+ * the downstream must verify with the SAME secret Voxline does — the new one.
+ * Whoever was receiving these deliveries has to be given it. That is one
+ * environment variable on their side, and it is the only step of this that
+ * touches someone else's system.
+ *
+ * The alternative, if a downstream can never be touched, is for Voxline to
+ * re-sign with that system's own secret before forwarding. It needs no change
+ * at their end and one more secret at ours. Not built: it is only worth it for
+ * a receiver that is live and cannot take a redeploy.
  */
 
 const SIGNATURE_TOLERANCE_SECS = 30 * 60;
