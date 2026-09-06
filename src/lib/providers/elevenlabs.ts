@@ -316,7 +316,16 @@ export function normaliseElevenLabsCall(
     // audio would go missing on the highest-scoring leads. Backfilled
     // conversations never re-emit that event either, so the fetch path is
     // needed regardless. See lib/recordings.ts.
-    recording: { kind: "elevenlabs", conversationId: providerCallId },
+    //
+    // Not requested at all for a call with no talk time. A dial that never
+    // connected has no audio, ElevenLabs answers 404, and the row ended up
+    // reading "recording failed" — which tells an agency something broke when
+    // nothing did. Left alone, the column keeps its `unavailable` default,
+    // which is the honest word for it.
+    recording:
+      durationSeconds > 0
+        ? { kind: "elevenlabs", conversationId: providerCallId }
+        : undefined,
     transcript: normaliseTranscript(payload, callerName),
     analysis,
     // Outcome, best evidence first.
