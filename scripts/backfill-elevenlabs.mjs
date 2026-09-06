@@ -88,12 +88,19 @@ const WEBHOOK_URL = arg("url");
 const LIMIT = Number(arg("limit", "100"));
 const COMMIT = flag("commit");
 
-const missing = [];
-if (!API_KEY) missing.push(`ELEVENLABS_API_KEY${SUFFIX}`);
-if (!SECRET) missing.push(`ELEVENLABS_WEBHOOK_SECRET${SUFFIX}`);
-if (missing.length) {
+if (!API_KEY) {
   console.error(
-    `Missing ${missing.join(" and ")}. Put them in voxline/.env.elevenlabs, or export them.`
+    `Missing ELEVENLABS_API_KEY${SUFFIX}. Put it in voxline/.env.elevenlabs, or export it.`
+  );
+  process.exit(1);
+}
+// The secret is only needed to SIGN, and a dry run never signs anything. Demanding
+// it up front blocked exactly the useful case: reading what an agent collects
+// before its webhook secret exists.
+if (COMMIT && !SECRET) {
+  console.error(
+    `Missing ELEVENLABS_WEBHOOK_SECRET${SUFFIX}, which --commit needs to sign each replay.\n` +
+    `It must match the value the deployed route verifies with. Drop --commit to inspect without it.`
   );
   process.exit(1);
 }
